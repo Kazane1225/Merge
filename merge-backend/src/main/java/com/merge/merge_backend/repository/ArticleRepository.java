@@ -11,4 +11,6 @@ import java.util.List;
 public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findByDeleteFlgFalse();
     Article findByUrl(String url);
+    List<Article> findByTitleContainingIgnoreCaseAndDeleteFlgFalse(String keyword);
+    List<Article> findByTitleContainingIgnoreCaseOrRenderedBodyContainingIgnoreCaseAndDeleteFlgFalse(String keyword, String body);
 }

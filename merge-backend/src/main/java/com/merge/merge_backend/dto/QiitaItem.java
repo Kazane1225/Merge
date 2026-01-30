@@ -12,7 +12,9 @@ public class QiitaItem {
     @JsonProperty("rendered_body")
     private String renderedBody;
 
-    // ゲッターとセッター
+    @JsonProperty("likes_count")
+    private int likesCount;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -24,4 +26,7 @@ public class QiitaItem {
 
     public String getRenderedBody() { return renderedBody; }
     public void setRenderedBody(String renderedBody) { this.renderedBody = renderedBody; }
+
+    public int getLikesCount() { return likesCount; }
+    public void setLikesCount(int likesCount) { this.likesCount = likesCount; }
 }

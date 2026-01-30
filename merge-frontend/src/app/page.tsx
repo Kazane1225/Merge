@@ -6,15 +6,42 @@ import MemoEditor from "../components/MemoEditor";
 
 export default function Home() {
   const [selectedArticle, setSelectedArticle] = useState<any>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [memoWidth, setMemoWidth] = useState(450);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleMouseDown = () => {
+    setIsResizing(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isResizing) return;
+    const newWidth = Math.max(300, Math.min(800, window.innerWidth - e.clientX));
+    setMemoWidth(newWidth);
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
 
   return (
-    <div className="flex h-screen w-full bg-[#0B1120] text-slate-300 font-sans selection:bg-indigo-500/30">
+    <div className="flex h-screen w-full bg-[#0B1120] text-slate-300 font-sans selection:bg-indigo-500/30" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
       
-      <aside className="w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-[#0F172A]">
-        <div className="h-14 flex items-center px-5 border-b border-slate-800">
+      {/* Left Sidebar */}
+      <aside className={`transition-all duration-300 flex-shrink-0 flex flex-col border-r border-slate-800 bg-[#0F172A] ${sidebarOpen ? 'w-80' : 'w-0 overflow-hidden'}`}>
+        <div className="h-14 flex items-center justify-between px-5 border-b border-slate-800">
           <h1 className="text-lg font-mono font-bold text-indigo-400">
             <span className="text-slate-500 mr-2">$</span>Merge_
           </h1>
+          <button 
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 hover:bg-slate-700 rounded transition-colors"
+            title="Close sidebar"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto">
           <ArticleView onSelectArticle={(article) => setSelectedArticle(article)} />
@@ -22,8 +49,19 @@ export default function Home() {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 bg-[#0B1120] relative">
-        <header className="h-14 border-b border-slate-800 flex items-center px-8 bg-[#0B1120]/95 backdrop-blur z-10">
-           <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
+        <header className="h-14 border-b border-slate-800 flex items-center px-8 bg-[#0B1120]/95 backdrop-blur z-10 gap-4">
+          {!sidebarOpen && (
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 hover:bg-slate-800 rounded transition-colors"
+              title="Open sidebar"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          )}
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
              <span>reading:</span>
              <span className="text-slate-300 truncate max-w-md">
                {selectedArticle ? selectedArticle.title : "No Article Selected"}
@@ -31,11 +69,12 @@ export default function Home() {
            </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 lg:p-12 scroll-smooth">
-          <div className="max-w-3xl mx-auto">
-            {selectedArticle ? (
-              <div className="w-full max-w-none">
-                <h1 className="text-3xl font-bold text-slate-100 mb-6">{selectedArticle.title}</h1>
+        <div className="flex-1 overflow-hidden flex min-w-0">
+          <div className="flex-1 overflow-y-auto scroll-smooth flex justify-center">
+            <div className="w-full max-w-7xl px-8 lg:px-12 py-8">
+              {selectedArticle ? (
+                <div className="w-full">
+                  <h1 className="text-3xl font-bold text-slate-100 mb-6">{selectedArticle.title}</h1>
                 <a href={selectedArticle.url} target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline break-all font-mono text-sm block mb-8">
                   {selectedArticle.url}
                 </a>
@@ -60,11 +99,21 @@ export default function Home() {
                 <p>&gt; Select an article from the explorer</p>
               </div>
             )}
+            </div>
           </div>
+
+          <div 
+            onMouseDown={handleMouseDown}
+            className={`w-1 bg-slate-700 hover:bg-indigo-500 transition-colors cursor-col-resize ${isResizing ? 'bg-indigo-500' : ''}`}
+          />
+          <aside style={{ width: memoWidth }} className="flex-shrink-0 flex flex-col border-l border-slate-800 bg-[#0F172A] z-20 hidden lg:flex overflow-hidden">
+            <MemoEditor targetArticle={selectedArticle} />
+          </aside>
         </div>
       </main>
 
-      <aside className="w-[450px] flex-shrink-0 flex flex-col border-l border-slate-800 bg-[#0F172A] z-20">
+      {/* Mobile Memo Editor */}
+      <aside className="lg:hidden w-full h-96 flex-shrink-0 flex flex-col border-t border-slate-800 bg-[#0F172A] z-20">
         <MemoEditor targetArticle={selectedArticle} />
       </aside>
 

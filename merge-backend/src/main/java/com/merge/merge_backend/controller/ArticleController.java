@@ -5,9 +5,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.merge.merge_backend.repository.ArticleRepository;
+import com.merge.merge_backend.service.ArticleService;
 import com.merge.merge_backend.entity.Article;
 import java.util.List;
 
@@ -16,15 +17,23 @@ import java.util.List;
 public class ArticleController {
 
     @Autowired
-    private ArticleRepository articleRepository;
+    private ArticleService articleService;
     
     @GetMapping("/articles")
     public List<Article> getAllArticles() {
-        return articleRepository.findAll();
+        return articleService.getAllArticles();
+    }
+    
+    @GetMapping("/articles/search")
+    public List<Article> searchArticles(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false, defaultValue = "rel") String sort,
+            @RequestParam(required = false, defaultValue = "all") String period) {
+        return articleService.searchArticles(keyword, sort, period);
     }
     
     @PostMapping("/articles")
     public Article createArticle(@RequestBody Article article) {
-        return articleRepository.save(article);
+        return articleService.createArticle(article);
     }
 }
