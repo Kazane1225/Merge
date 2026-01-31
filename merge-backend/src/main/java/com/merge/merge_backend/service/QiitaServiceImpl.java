@@ -142,10 +142,15 @@ public class QiitaServiceImpl implements QiitaService {
                 entity, 
                 QiitaItem.class
             );
-            return response.getBody();
+            QiitaItem item = response.getBody();
+            if (item != null) {
+                return item;
+            }
+            logger.warning("No article found for ID: " + itemId);
+            return new QiitaItem();
         } catch (Exception e) {
             logger.severe("Error fetching article detail: " + e.getMessage());
-            return null;
+            return new QiitaItem();
         }
     }
 }

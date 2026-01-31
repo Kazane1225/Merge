@@ -172,7 +172,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
           }}
           className={`px-4 py-3 text-xs font-bold transition-colors border-b-2 ${activeTab === 'qiita-trending' ? 'text-indigo-400 border-indigo-400' : 'text-slate-500 hover:text-slate-300 border-transparent'}`}
         >
-          トレンド
+          Qiitaトレンド
         </button>
       </div>
 

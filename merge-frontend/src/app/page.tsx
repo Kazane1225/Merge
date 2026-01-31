@@ -25,14 +25,15 @@ export default function Home() {
   };
 
   const handleSelectArticle = async (article: any) => {
-    // Qiita記事の場合は詳細データを取得
     if (article.id && !article.rendered_body) {
       try {
         const response = await fetch(`http://localhost:8080/api/qiita/article/${article.id}`);
-        if (response.ok) {
+        if (response.ok && response.headers.get('content-length') !== '0') {
           const detailArticle = await response.json();
-          setSelectedArticle(detailArticle);
-          return;
+          if (detailArticle && detailArticle.id) {
+            setSelectedArticle(detailArticle);
+            return;
+          }
         }
       } catch (err) {
         console.error("Error fetching article detail:", err);
