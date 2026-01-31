@@ -6,4 +6,6 @@ import java.util.List;
 public interface QiitaService {
     List<QiitaItem> searchArticles(String keyword, String sort, String period);
     List<QiitaItem> getHotArticles();
+    List<QiitaItem> getHotArticles(String period);
+    QiitaItem getArticleDetail(String itemId);
 }

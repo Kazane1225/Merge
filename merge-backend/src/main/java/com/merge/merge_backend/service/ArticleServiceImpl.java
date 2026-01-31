@@ -33,6 +33,15 @@ public class ArticleServiceImpl implements ArticleService {
         return articleRepository.save(article);
     }
 
+    @Override
+    public void deleteArticle(Long id) {
+        Article article = articleRepository.findById(id).orElse(null);
+        if (article != null) {
+            article.setDeleteFlg(true);
+            articleRepository.save(article);
+        }
+    }
+
     private List<Article> filterByKeyword(String keyword) {
         if (keyword != null && !keyword.isEmpty()) {
             return articleRepository.findByTitleContainingIgnoreCaseOrRenderedBodyContainingIgnoreCaseAndDeleteFlgFalse(keyword, keyword);

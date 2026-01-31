@@ -24,7 +24,13 @@ public class QiitaController {
     }
 
     @GetMapping("/hot")
-    public List<QiitaItem> getHotArticles() {
-        return qiitaService.getHotArticles();
+    public List<QiitaItem> getHotArticles(
+            @RequestParam(required = false, defaultValue = "all") String period) {
+        return qiitaService.getHotArticles(period);
+    }
+
+    @GetMapping("/article/{id}")
+    public QiitaItem getArticleDetail(@PathVariable String id) {
+        return qiitaService.getArticleDetail(id);
     }
 }

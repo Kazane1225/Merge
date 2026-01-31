@@ -7,4 +7,5 @@ public interface ArticleService {
     List<Article> getAllArticles();
     List<Article> searchArticles(String keyword, String sort, String period);
     Article createArticle(Article article);
+    void deleteArticle(Long id);
 }

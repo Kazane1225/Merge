@@ -24,6 +24,23 @@ export default function Home() {
     setIsResizing(false);
   };
 
+  const handleSelectArticle = async (article: any) => {
+    // Qiita記事の場合は詳細データを取得
+    if (article.id && !article.rendered_body) {
+      try {
+        const response = await fetch(`http://localhost:8080/api/qiita/article/${article.id}`);
+        if (response.ok) {
+          const detailArticle = await response.json();
+          setSelectedArticle(detailArticle);
+          return;
+        }
+      } catch (err) {
+        console.error("Error fetching article detail:", err);
+      }
+    }
+    setSelectedArticle(article);
+  };
+
   return (
     <div className="flex h-screen w-full bg-[#0B1120] text-slate-300 font-sans selection:bg-indigo-500/30" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
       
@@ -44,7 +61,7 @@ export default function Home() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <ArticleView onSelectArticle={(article) => setSelectedArticle(article)} />
+          <ArticleView onSelectArticle={handleSelectArticle} />
         </div>
       </aside>
 

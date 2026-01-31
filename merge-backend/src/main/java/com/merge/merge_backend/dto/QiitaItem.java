@@ -15,6 +15,9 @@ public class QiitaItem {
     @JsonProperty("likes_count")
     private int likesCount;
 
+    @JsonProperty("stocks_count")
+    private int stocksCount;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -29,4 +32,7 @@ public class QiitaItem {
 
     public int getLikesCount() { return likesCount; }
     public void setLikesCount(int likesCount) { this.likesCount = likesCount; }
+
+    public int getStocksCount() { return stocksCount; }
+    public void setStocksCount(int stocksCount) { this.stocksCount = stocksCount; }
 }
