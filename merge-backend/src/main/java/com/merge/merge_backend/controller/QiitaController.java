@@ -29,6 +29,11 @@ public class QiitaController {
         return qiitaService.getHotArticles(period);
     }
 
+    @GetMapping("/timeline")
+    public List<QiitaItem> getTimelineArticles() {
+        return qiitaService.getTimelineArticles();
+    }
+
     @GetMapping("/article/{id}")
     public QiitaItem getArticleDetail(@PathVariable String id) {
         return qiitaService.getArticleDetail(id);

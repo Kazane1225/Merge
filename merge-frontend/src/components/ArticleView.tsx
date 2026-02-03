@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 
 export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: any) => void }) {
-  const [activeTab, setActiveTab] = useState<'database' | 'qiita-search' | 'qiita-trending'>('database');
+  const [activeTab, setActiveTab] = useState<'database' | 'qiita-search' | 'qiita-trending' | 'qiita-timeline'>('database');
   const [articles, setArticles] = useState<any[]>([]);
   const [keyword, setKeyword] = useState('');
   const [sort, setSort] = useState<'rel' | 'count' | 'created'>('rel');
@@ -33,7 +33,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
         searchQiita({ period: v });
       } else if (activeTab === 'qiita-trending') {
         fetchTrendingArticles(v);
-      }
+      } 
     }, 300);
   };
 
@@ -58,6 +58,19 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
         setArticles(sorted);
       })
       .catch(err => console.error("Trending Fetch Error:", err))
+      .finally(() => setLoading(false));
+  };
+
+  const fetchTimelineArticles = () => {
+    setLoading(true);
+    setArticles([]);
+    const url = `http://localhost:8080/api/qiita/timeline`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        setArticles(data);
+      })
+      .catch(err => console.error("Timeline Fetch Error:", err))
       .finally(() => setLoading(false));
   };
 
@@ -135,6 +148,8 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       fetchDbArticles();
     } else if (activeTab === 'qiita-trending') {
       fetchTrendingArticles();
+    } else if (activeTab === 'qiita-timeline') {
+      fetchTimelineArticles();
     }
   }, [activeTab]);
 
@@ -173,6 +188,17 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
           className={`px-4 py-3 text-xs font-bold transition-colors border-b-2 ${activeTab === 'qiita-trending' ? 'text-indigo-400 border-indigo-400' : 'text-slate-500 hover:text-slate-300 border-transparent'}`}
         >
           Qiitaトレンド
+        </button>
+        <button 
+          onClick={() => {
+            setArticles([]);
+            setKeyword('');
+            setLoading(false);
+            setActiveTab('qiita-timeline');
+          }}
+          className={`px-4 py-3 text-xs font-bold transition-colors border-b-2 ${activeTab === 'qiita-timeline' ? 'text-indigo-400 border-indigo-400' : 'text-slate-500 hover:text-slate-300 border-transparent'}`}
+        >
+          Qiitaタイムライン
         </button>
       </div>
 
@@ -223,15 +249,15 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
                 className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60 disabled:cursor-wait"
               >
                 <option value="all">全期間</option>
-                <option value="week">1週間以内</option>
                 <option value="month">1ヶ月以内</option>
+                <option value="week">1週間以内</option>
               </select>
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === 'qiita-trending' && (
+      {(activeTab === 'qiita-trending') && (
         <div className="border-b border-slate-800 bg-slate-900/30 p-3">
           <select 
             value={period} 
@@ -240,8 +266,8 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
             className="w-full bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60 disabled:cursor-wait"
           >
             <option value="all">全期間</option>
-            <option value="week">1週間以内</option>
             <option value="month">1ヶ月以内</option>
+            <option value="week">1週間以内</option>
           </select>
         </div>
       )}
@@ -256,44 +282,44 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
             <div className="text-slate-500">記事が見つかりません</div>
           </div>
         ) : (
-          <div className="space-y-2 p-3">
+          <div className="space-y-3 p-3">
             {articles.map((article: any) => (
               <div 
                 key={article.id} 
                 onClick={() => onSelectArticle(article)}
-                className="p-3 bg-slate-800/50 hover:bg-slate-700 rounded cursor-pointer transition-colors group relative"
+                className="p-4 bg-gradient-to-r from-slate-800/60 to-slate-800/40 hover:from-slate-700/80 hover:to-slate-700/60 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all duration-200 group relative shadow-md hover:shadow-lg hover:shadow-indigo-500/10"
               >
-                <div className="flex gap-2 items-start">
+                <div className="flex gap-3 items-start">
                   {activeTab === 'database' && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-blue-900/50 text-blue-300 flex-shrink-0 h-fit">
+                    <span className="text-[10px] px-2 py-1 rounded font-bold uppercase bg-blue-900/60 text-blue-200 flex-shrink-0 h-fit border border-blue-700/50">
                       DB
                     </span>
                   )}
-                  {(activeTab === 'qiita-search' || activeTab === 'qiita-trending') && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-green-900/50 text-green-300 flex-shrink-0 h-fit">
+                  {(activeTab === 'qiita-search' || activeTab === 'qiita-trending' || activeTab === 'qiita-timeline') && (
+                    <span className="text-[10px] px-2 py-1 rounded font-bold uppercase bg-green-900/60 text-green-200 flex-shrink-0 h-fit border border-green-700/50">
                       Qiita
                     </span>
                   )}
-                  <div className="flex-1">
-                    <h3 className="text-xs font-bold text-indigo-300 line-clamp-2 group-hover:text-indigo-200">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-slate-100 line-clamp-2 group-hover:text-indigo-300 transition-colors">
                       {article.title || article.name || 'No title'}
                     </h3>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-1 line-clamp-1">
+                <p className="text-xs text-slate-400 mt-2 line-clamp-1 truncate">
                   {article.url || article.link || ''}
                 </p>
-                <div className="text-xs text-slate-500 mt-1 flex gap-3">
-                  {article.likes_count !== undefined && <span>❤️ {article.likes_count}</span>}
-                  {article.views !== undefined && <span>👁 {article.views}</span>}
-                  {article.created_at && <span>{new Date(article.created_at).toLocaleDateString()}</span>}
+                <div className="text-xs text-slate-500 mt-2 flex gap-4 flex-wrap">
+                  {article.likes_count !== undefined && <span className="flex items-center gap-1"><span>❤️</span> <span className="text-slate-400">{article.likes_count}</span></span>}
+                  {article.views !== undefined && <span className="flex items-center gap-1"><span>👁</span> <span className="text-slate-400">{article.views}</span></span>}
+                  {article.created_at && <span className="text-slate-400">{new Date(article.created_at).toLocaleDateString('ja-JP')}</span>}
                 </div>
                 {activeTab === 'database' && (
                   <button 
                     onClick={(e) => handleDeleteArticle(e, article.id)}
-                    className="absolute top-2 right-2 p-1 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute top-3 right-3 p-1.5 bg-red-600/30 hover:bg-red-500/60 text-red-300 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all duration-200 border border-red-600/40"
                   >
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
                     </svg>
                   </button>

@@ -7,5 +7,6 @@ public interface QiitaService {
     List<QiitaItem> searchArticles(String keyword, String sort, String period);
     List<QiitaItem> getHotArticles();
     List<QiitaItem> getHotArticles(String period);
+    List<QiitaItem> getTimelineArticles();
     QiitaItem getArticleDetail(String itemId);
 }

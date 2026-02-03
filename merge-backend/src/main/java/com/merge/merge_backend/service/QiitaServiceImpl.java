@@ -98,6 +98,12 @@ public class QiitaServiceImpl implements QiitaService {
         }
     }
 
+    @Override
+    public List<QiitaItem> getTimelineArticles() {
+        String urlStr = "https://qiita.com/api/v2/items?page=1&per_page=100";
+        return fetchFromQiita(URI.create(urlStr));
+    }
+
     private List<QiitaItem> fetchFromQiita(URI uri) {
         try {
             HttpHeaders headers = new HttpHeaders();
