@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 .qiita-content {
-  color: #cbd5e1; 
+  color: #e2e8f0; 
   line-height: 1.625;
+  background-color: #0f172a;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .qiita-content h1 {
@@ -12,8 +17,8 @@
   margin-top: 2.5rem;
   margin-bottom: 1.5rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #334155;
-  color: #ffffff;
+  border-bottom: 2px solid #475569;
+  color: #f1f5f9;
 }
 
 .qiita-content h2 {
@@ -23,8 +28,8 @@
   margin-top: 2rem;
   margin-bottom: 1rem;
   padding-left: 1rem;
-  border-left: 4px solid #6366f1;
-  color: #f1f5f9;
+  border-left: 4px solid #818cf8;
+  color: #e0e7ff;
 }
 
 .qiita-content h3 {
@@ -33,14 +38,18 @@
   font-weight: 700;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
-  color: #e2e8f0;
+  color: #e0e7ff;
 }
 
 .qiita-content a {
-  color: #818cf8;
+  color: #a5f3fc;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s;
 }
 .qiita-content a:hover {
-  text-decoration: underline;
+  border-bottom-color: #a5f3fc;
+  color: #67e8f9;
 }
 
 .qiita-content ul {
@@ -76,16 +85,14 @@
 
 .qiita-content blockquote {
   padding-left: 1rem;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
   margin-top: 1rem;
   margin-bottom: 1rem;
   font-style: italic;
-  border-top-right-radius: 0.25rem;
-  border-bottom-right-radius: 0.25rem;
   border-left: 4px solid #475569;
-  color: #94a3b8;
-  background-color: rgba(30, 41, 59, 0.3);
+  color: #cbd5e1;
+  background-color: rgba(30, 41, 59, 0.5);
 }
 
 .qiita-content .code-frame {
@@ -115,19 +122,46 @@
   overflow-x: auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875rem;
-  line-height: 1.5rem;
+  line-height: 1.6;
   color: #e2e8f0;
+  background: #2d2d30;
+  border: 1px solid #3c3c3c;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.qiita-content pre::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.qiita-content pre::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+.qiita-content pre::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.qiita-content pre::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 .qiita-content code {
-  padding: 0.125rem 0.375rem;
-  margin: 0 0.125rem;
+  padding: 0.25rem 0.5rem;
+  margin: 0 0.15rem;
   border-radius: 0.25rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875rem;
+  font-size: 0.875em;
   background-color: #1e293b;
-  color: #e2e8f0;
+  color: #fca5a5;
   border: 1px solid #334155;
+  word-break: break-word;
 }
 .qiita-content pre code {
   background-color: transparent;
@@ -135,4 +169,398 @@
   margin: 0;
   border: none;
   color: inherit;
+}
+.qiita-content p {
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.8; /* 読みやすく */
+}
+
+/* 画像の最大幅制限とセンタリング */
+.qiita-content img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 1px solid #334155;
+}
+
+/* Dev.toのコードブロック (pre タグ) */
+.qiita-content pre {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: #2d2d30;
+  border: 1px solid #3c3c3c;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  overflow-x: auto;
+  color: #e2e8f0;
+}
+
+/* インラインコード */
+.qiita-content :not(pre) > code {
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875em;
+}
+
+/* リストのスタイル強化 */
+.qiita-content ul, .qiita-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* リンクの色 */
+.qiita-content a {
+  color: #818cf8;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.qiita-content a:hover {
+  border-bottom-color: #818cf8;
+}
+
+/* iframe (埋め込み動画など) */
+.qiita-content iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.5rem;
+}
+
+/* ===== Dev.to用の強化スタイル ===== */
+
+/* 画像の強化 */
+.qiita-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.5rem auto;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid #334155;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.qiita-content img:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* テーブルのスタイリング */
+.qiita-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid #334155;
+  background-color: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.qiita-content table thead {
+  background-color: #1e293b;
+  border-bottom: 2px solid #475569;
+}
+
+.qiita-content table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  color: #f1f5f9;
+  border-right: 1px solid #334155;
+}
+
+.qiita-content table th:last-child {
+  border-right: none;
+}
+
+.qiita-content table td {
+  padding: 0.75rem 1rem;
+  border-right: 1px solid #334155;
+  border-bottom: 1px solid #334155;
+  color: #cbd5e1;
+}
+
+.qiita-content table td:last-child {
+  border-right: none;
+}
+
+.qiita-content table tbody tr:hover {
+  background-color: #0f172a;
+}
+
+/* ストロング・ボールド */
+.qiita-content strong,
+.qiita-content b {
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+/* イタリック */
+.qiita-content em,
+.qiita-content i {
+  font-style: italic;
+  color: #e2e8f0;
+}
+
+/* 水平線 */
+.qiita-content hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #475569, transparent);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* ネストされたリスト */
+.qiita-content ul ul,
+.qiita-content ol ol,
+.qiita-content ul ol,
+.qiita-content ol ul {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 2rem;
+}
+
+/* リスト項目 */
+.qiita-content li {
+  margin-bottom: 0.5rem;
+  color: #e2e8f0;
+}
+
+/* 定義リスト */
+.qiita-content dl {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.qiita-content dt {
+  font-weight: 700;
+  margin-top: 0.5rem;
+  color: #f1f5f9;
+}
+
+.qiita-content dd {
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #cbd5e1;
+}
+
+/* 小さいテキスト */
+.qiita-content small {
+  font-size: 0.875em;
+  color: #94a3b8;
+}
+
+/* Mark (ハイライト) */
+.qiita-content mark {
+  background-color: rgba(139, 92, 246, 0.3);
+  padding: 0.1em 0.3em;
+  border-radius: 0.25rem;
+  color: #ddd6fe;
+}
+
+/* 削除テキスト */
+.qiita-content del,
+.qiita-content s {
+  text-decoration: line-through;
+  color: #64748b;
+}
+
+/* 上付き・下付き */
+.qiita-content sup,
+.qiita-content sub {
+  font-size: 0.8em;
+  position: relative;
+}
+
+.qiita-content sup {
+  top: -0.5em;
+}
+
+.qiita-content sub {
+  bottom: -0.25em;
+}
+
+/* ボタンライク */
+.qiita-content button,
+.qiita-content input[type="button"],
+.qiita-content input[type="submit"] {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.qiita-content button:hover,
+.qiita-content input[type="button"]:hover,
+.qiita-content input[type="submit"]:hover {
+  background-color: #4338ca;
+}
+
+/* フォーム要素 */
+.qiita-content input[type="text"],
+.qiita-content input[type="email"],
+.qiita-content input[type="search"],
+.qiita-content textarea,
+.qiita-content select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #334155;
+  border-radius: 0.375rem;
+  background-color: #1e293b;
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.qiita-content input[type="text"]:focus,
+.qiita-content input[type="email"]:focus,
+.qiita-content input[type="search"]:focus,
+.qiita-content textarea:focus,
+.qiita-content select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* 詳細・概要 */
+.qiita-content details {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #334155;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+.qiita-content summary {
+  font-weight: 700;
+  cursor: pointer;
+  color: #f1f5f9;
+  padding: 0.5rem 0;
+}
+
+.qiita-content details[open] summary {
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 1rem;
+}
+
+/* バッジ・タグ風 */
+.qiita-content .badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  margin: 0.25rem;
+  border-radius: 9999px;
+  background-color: #4f46e5;
+  color: white;
+  font-size: 0.875em;
+  font-weight: 600;
+}
+
+/* キャプション */
+.qiita-content figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #94a3b8;
+  text-align: center;
+  font-style: italic;
+}
+
+/* コード行のハイライト (Prismなど) */
+.qiita-content .hljs {
+  background-color: transparent !important;
+  color: #e2e8f0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow-x: visible !important;
+  margin: 0 !important;
+}
+
+/* Prism.jsのシンタックスハイライト */
+.qiita-content .hljs-string {
+  color: #ce9178;
+}
+
+.qiita-content .hljs-number {
+  color: #b5cea8;
+}
+
+.qiita-content .hljs-literal {
+  color: #569cd6;
+}
+
+.qiita-content .hljs-attr,
+.qiita-content .hljs-attribute {
+  color: #9cdcfe;
+}
+
+.qiita-content .hljs-keyword {
+  color: #d4a574;
+  font-weight: 600;
+}
+
+.qiita-content .hljs-title {
+  color: #4ec9b0;
+}
+
+.qiita-content .hljs-comment {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.qiita-content .hljs-built_in {
+  color: #ce9178;
+}
+
+.qiita-content .hljs-type {
+  color: #4ec9b0;
+}
+
+.qiita-content .hljs-variable {
+  color: #9cdcfe;
+}
+
+/* 警告・情報ボックス */
+.qiita-content .callout,
+.qiita-content .alert {
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border-left: 4px solid #6366f1;
+  border-radius: 0.375rem;
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.qiita-content .callout.warning,
+.qiita-content .alert.warning {
+  border-left-color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.qiita-content .callout.danger,
+.qiita-content .alert.danger {
+  border-left-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.qiita-content .callout.success,
+.qiita-content .alert.success {
+  border-left-color: #10b981;
+  background-color: rgba(16, 185, 129, 0.1);
 }

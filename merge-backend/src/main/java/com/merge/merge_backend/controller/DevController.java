@@ -1,40 +1,40 @@
 package com.merge.merge_backend.controller;
 
-import com.merge.merge_backend.dto.QiitaItem;
-import com.merge.merge_backend.service.QiitaService;
+import com.merge.merge_backend.dto.DevItem;
+import com.merge.merge_backend.service.DevService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/qiita")
-public class QiitaController {
+@RequestMapping("/api/dev")
+public class DevController {
 
     @Autowired
-    private QiitaService qiitaService;
+    private DevService devService;
 
     @GetMapping("/search")
-    public List<QiitaItem> searchArticles(
+    public List<DevItem> searchArticles(
             @RequestParam String keyword,
             @RequestParam(required = false, defaultValue = "rel") String sort,
             @RequestParam(required = false, defaultValue = "all") String period) {
-        return qiitaService.searchArticles(keyword, sort, period);
+        return devService.searchArticles(keyword, sort, period);
     }
 
     @GetMapping("/hot")
-    public List<QiitaItem> getHotArticles(
+    public List<DevItem> getHotArticles(
             @RequestParam(required = false, defaultValue = "all") String period) {
-        return qiitaService.getHotArticles(period);
+        return devService.getHotArticles(period);
     }
 
     @GetMapping("/timeline")
-    public List<QiitaItem> getTimelineArticles() {
-        return qiitaService.getTimelineArticles();
+    public List<DevItem> getTimelineArticles() {
+        return devService.getTimelineArticles();
     }
 
     @GetMapping("/article/{id}")
-    public QiitaItem getArticleDetail(@PathVariable String id) {
-        return qiitaService.getArticleDetail(id);
+    public DevItem getArticleDetail(@PathVariable String id) {
+        return devService.getArticleDetail(id);
     }
 }

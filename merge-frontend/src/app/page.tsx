@@ -25,7 +25,8 @@ export default function Home() {
   };
 
   const handleSelectArticle = async (article: any) => {
-    if (article.id && !article.rendered_body) {
+    // Qiitaの記事詳細取得（IDが数値で、本文がない場合）
+    if (article.id && typeof article.id === 'number' && !article.rendered_body && !article.body_html) {
       try {
         const response = await fetch(`http://localhost:8080/api/qiita/article/${article.id}`);
         if (response.ok && response.headers.get('content-length') !== '0') {
@@ -37,6 +38,21 @@ export default function Home() {
         }
       } catch (err) {
         console.error("Error fetching article detail:", err);
+      }
+    }
+    // Dev.toの記事詳細取得（Qiitaではない場合で、本文がない場合）
+    if (article.id && !article.body_html && !article.rendered_body) {
+      try {
+        const response = await fetch(`http://localhost:8080/api/dev/article/${article.id}`);
+        if (response.ok) {
+          const detailArticle = await response.json();
+          if (detailArticle && detailArticle.id) {
+            setSelectedArticle(detailArticle);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching Dev.to article detail:", err);
       }
     }
     setSelectedArticle(article);
@@ -92,14 +108,21 @@ export default function Home() {
             <div className="w-full max-w-7xl px-8 lg:px-12 py-8">
               {selectedArticle ? (
                 <div className="w-full">
+                  {selectedArticle.cover_image && (
+                    <img 
+                      src={selectedArticle.cover_image} 
+                      alt="Cover image"
+                      className="w-full h-80 object-cover rounded-lg mb-8"
+                    />
+                  )}
                   <h1 className="text-3xl font-bold text-slate-100 mb-6">{selectedArticle.title}</h1>
                 <a href={selectedArticle.url} target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline break-all font-mono text-sm block mb-8">
                   {selectedArticle.url}
                 </a>
 
-                {selectedArticle.rendered_body ? (
+                {selectedArticle.rendered_body || selectedArticle.body_html ? (
                   <div 
-                    dangerouslySetInnerHTML={{ __html: selectedArticle.rendered_body }} 
+                    dangerouslySetInnerHTML={{ __html: selectedArticle.rendered_body || selectedArticle.body_html }} 
                     className="qiita-content"
                   />
                 ) : (
@@ -107,7 +130,7 @@ export default function Home() {
                     <p className="text-sm text-slate-300 font-mono">
                       <span className="text-yellow-400">Warning:</span> この記事は本文データを持っていません。
                       <br/>
-                      Qiita検索から選択した記事のみ、プレビューが表示されます。
+                      Qiita/Dev.to検索から選択した記事のみ、プレビューが表示されます。
                     </p>
                   </div>
                 )}

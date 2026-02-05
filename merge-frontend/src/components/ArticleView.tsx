@@ -2,251 +2,200 @@
 
 import { useEffect, useState, useRef } from 'react';
 
+const API_BASE = 'http://localhost:8080/api';
+
 export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: any) => void }) {
-  const [activeTab, setActiveTab] = useState<'database' | 'qiita-search' | 'qiita-trending' | 'qiita-timeline'>('database');
+  const [activeMain, setActiveMain] = useState<'database' | 'qiita' | 'dev'>('database');
+  const [activeSub, setActiveSub] = useState<'search' | 'trending' | 'timeline'>('search');
   const [articles, setArticles] = useState<any[]>([]);
   const [keyword, setKeyword] = useState('');
   const [sort, setSort] = useState<'rel' | 'count' | 'created'>('rel');
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
   const [loading, setLoading] = useState(false);
-  const debouncedSearchRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleSortChange = (v: typeof sort) => {
+  const handleSort = (v: typeof sort) => {
     setSort(v);
-    if (debouncedSearchRef.current) clearTimeout(debouncedSearchRef.current);
-    debouncedSearchRef.current = setTimeout(() => {
-      if (activeTab === 'database') {
-        searchDbArticles({ sort: v });
-      } else if (activeTab === 'qiita-search') {
-        searchQiita({ sort: v });
-      }
-    }, 300);
+    clearTimeout(debounceRef.current ?? undefined);
+    debounceRef.current = setTimeout(() => fetchArticles({ sort: v }), 300);
   };
 
-  const handlePeriodChange = (v: typeof period) => {
+  const handlePeriod = (v: typeof period) => {
     setPeriod(v);
-    if (debouncedSearchRef.current) clearTimeout(debouncedSearchRef.current);
-    debouncedSearchRef.current = setTimeout(() => {
-      if (activeTab === 'database') {
-        searchDbArticles({ period: v });
-      } else if (activeTab === 'qiita-search') {
-        searchQiita({ period: v });
-      } else if (activeTab === 'qiita-trending') {
-        fetchTrendingArticles(v);
-      } 
-    }, 300);
+    clearTimeout(debounceRef.current ?? undefined);
+    debounceRef.current = setTimeout(() => fetchArticles({ period: v }), 300);
   };
 
-  const fetchDbArticles = () => {
-    setLoading(true);
-    fetch('http://localhost:8080/api/articles')
-      .then(res => res.json())
-      .then(data => setArticles(data))
-      .catch(err => console.error("DB Fetch Error:", err))
-      .finally(() => setLoading(false));
-  };
-
-  const fetchTrendingArticles = (p?: string) => {
-    const periodParam = p ?? period;
-    setLoading(true);
+  const resetState = () => {
     setArticles([]);
-    const url = `http://localhost:8080/api/qiita/hot?period=${periodParam}`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        const sorted = [...data].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
-        setArticles(sorted);
-      })
-      .catch(err => console.error("Trending Fetch Error:", err))
-      .finally(() => setLoading(false));
+    setKeyword('');
+    setLoading(false);
   };
 
-  const fetchTimelineArticles = () => {
-    setLoading(true);
-    setArticles([]);
-    const url = `http://localhost:8080/api/qiita/timeline`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        setArticles(data);
-      })
-      .catch(err => console.error("Timeline Fetch Error:", err))
-      .finally(() => setLoading(false));
-  };
-
-  const searchDbArticles = (opts?: { sort?: typeof sort; period?: typeof period; keyword?: string }) => {
+  const fetchArticles = (opts?: { sort?: typeof sort; period?: typeof period; keyword?: string }) => {
     const s = opts?.sort ?? sort;
     const p = opts?.period ?? period;
     const kw = opts?.keyword ?? keyword;
-    
-    const url = `http://localhost:8080/api/articles/search?keyword=${encodeURIComponent(kw)}&sort=${s}&period=${p}`;
+
     setLoading(true);
     setArticles([]);
+
+    let url = '';
+    if (activeMain === 'database') {
+      if (activeSub === 'search') {
+        url = `${API_BASE}/articles/search?keyword=${encodeURIComponent(kw)}&sort=${s}&period=${p}`;
+      } else {
+        url = `${API_BASE}/articles`;
+      }
+    } else if (activeMain === 'qiita') {
+      if (activeSub === 'search') {
+        url = `${API_BASE}/qiita/search?keyword=${encodeURIComponent(kw)}&sort=${s}&period=${p}`;
+      } else if (activeSub === 'trending') {
+        url = `${API_BASE}/qiita/hot?period=${p}`;
+      } else {
+        url = `${API_BASE}/qiita/timeline`;
+      }
+    } else {
+      if (activeSub === 'search') {
+        url = `${API_BASE}/dev/search?keyword=${encodeURIComponent(kw)}&sort=${s}&period=${p}`;
+      } else if (activeSub === 'trending') {
+        url = `${API_BASE}/dev/hot?period=${p}`;
+      } else {
+        url = `${API_BASE}/dev/timeline`;
+      }
+    }
+
     fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        let sorted = [...data];
-        if (s === 'created') {
-          sorted.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-        }
-        setArticles(sorted);
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
       })
-      .catch(err => console.error("DB Search Error:", err))
-      .finally(() => setLoading(false));
-  };
-
-  const searchQiita = (opts?: { sort?: typeof sort; period?: typeof period; keyword?: string }) => {
-    const s = opts?.sort ?? sort;
-    const p = opts?.period ?? period;
-    const kw = opts?.keyword ?? keyword;
-    if (!kw) return;
-
-    const url = `http://localhost:8080/api/qiita/search?keyword=${encodeURIComponent(kw)}&sort=${s}&period=${p}`;
-    setLoading(true);
-    setArticles([]);
-    fetch(url)
-      .then(res => res.json())
       .then(data => {
         let sorted = [...data];
         if (s === 'count') {
-          sorted.sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+          sorted.sort((a, b) => 
+            (b.likes_count ?? b.positive_reactions_count ?? 0) - 
+            (a.likes_count ?? a.positive_reactions_count ?? 0)
+          );
         } else if (s === 'created') {
-          sorted.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+          sorted.sort((a, b) => 
+            new Date(b.created_at ?? b.published_at ?? 0).getTime() - 
+            new Date(a.created_at ?? a.published_at ?? 0).getTime()
+          );
         }
         setArticles(sorted);
       })
-      .catch(err => console.error("Qiita Search Error:", err))
+      .catch(err => console.error('Fetch error:', err))
       .finally(() => setLoading(false));
   };
 
-  const handleDeleteArticle = (e: React.MouseEvent, articleId: number) => {
+  const handleDelete = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (confirm('この記事を削除しますか？')) {
-      fetch(`http://localhost:8080/api/articles/${articleId}`, {
-        method: 'DELETE',
-      })
+    if (!confirm('この記事を削除しますか？')) return;
+
+    fetch(`${API_BASE}/articles/${id}`, { method: 'DELETE' })
       .then(res => {
         if (res.ok) {
-          setArticles(articles.filter((a: any) => a.id !== articleId));
+          setArticles(articles.filter(a => a.id !== id));
         } else {
           alert('削除に失敗しました');
         }
       })
-      .catch(err => {
-        console.error("Delete Error:", err);
-        alert('削除中にエラーが発生しました');
-      });
-    }
+      .catch(() => alert('削除中にエラーが発生しました'));
+  };
+
+  const switchTab = (main: typeof activeMain, sub?: typeof activeSub) => {
+    setActiveMain(main);
+    if (sub) setActiveSub(sub);
+    resetState();
   };
 
   useEffect(() => {
-    setArticles([]);
-    setKeyword('');
-    setLoading(false);
-    
-    if (activeTab === 'database') {
-      fetchDbArticles();
-    } else if (activeTab === 'qiita-trending') {
-      fetchTrendingArticles();
-    } else if (activeTab === 'qiita-timeline') {
-      fetchTimelineArticles();
-    }
-  }, [activeTab]);
+    resetState();
+    fetchArticles();
+  }, [activeMain, activeSub]);
+
+  const showSearch = (activeMain === 'qiita' || activeMain === 'dev' || activeMain === 'database') && activeSub === 'search';
+  const showTrendingFilter = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'trending';
 
   return (
     <div className="w-full h-full bg-[#0F172A] flex flex-col">
-      <div className="flex border-b border-slate-800">
-        <button 
-          onClick={() => {
-            setArticles([]);
-            setKeyword('');
-            setLoading(false);
-            setActiveTab('database');
-          }}
-          className={`px-4 py-3 text-xs font-bold transition-colors border-b-2 ${activeTab === 'database' ? 'text-indigo-400 border-indigo-400' : 'text-slate-500 hover:text-slate-300 border-transparent'}`}
-        >
-          DATABASE
-        </button>
-        <button 
-          onClick={() => {
-            setArticles([]);
-            setKeyword('');
-            setLoading(false);
-            setActiveTab('qiita-search');
-          }}
-          className={`px-4 py-3 text-xs font-bold transition-colors border-b-2 ${activeTab === 'qiita-search' ? 'text-indigo-400 border-indigo-400' : 'text-slate-500 hover:text-slate-300 border-transparent'}`}
-        >
-          Qiita: 検索
-        </button>
-        <button 
-          onClick={() => {
-            setArticles([]);
-            setKeyword('');
-            setLoading(false);
-            setActiveTab('qiita-trending');
-          }}
-          className={`px-4 py-3 text-xs font-bold transition-colors border-b-2 ${activeTab === 'qiita-trending' ? 'text-indigo-400 border-indigo-400' : 'text-slate-500 hover:text-slate-300 border-transparent'}`}
-        >
-          Qiitaトレンド
-        </button>
-        <button 
-          onClick={() => {
-            setArticles([]);
-            setKeyword('');
-            setLoading(false);
-            setActiveTab('qiita-timeline');
-          }}
-          className={`px-4 py-3 text-xs font-bold transition-colors border-b-2 ${activeTab === 'qiita-timeline' ? 'text-indigo-400 border-indigo-400' : 'text-slate-500 hover:text-slate-300 border-transparent'}`}
-        >
-          Qiitaタイムライン
-        </button>
+      {/* メインタブ */}
+      <div className="flex border-b border-slate-800 bg-slate-900/50">
+        {['database', 'qiita', 'dev'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => switchTab(tab as typeof activeMain, 'search')}
+            className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${
+              activeMain === tab
+                ? 'text-indigo-400 border-indigo-400'
+                : 'text-slate-500 hover:text-slate-300 border-transparent'
+            }`}
+          >
+            {tab === 'database' ? 'Database' : tab === 'qiita' ? 'Qiita' : 'Dev.to'}
+          </button>
+        ))}
       </div>
 
-      {(activeTab === 'qiita-search' || activeTab === 'database') && (
+      {/* サブタブ */}
+      {(activeMain === 'qiita' || activeMain === 'dev') && (
+        <div className="flex border-b border-slate-800 bg-slate-800/30 px-4">
+          {['search', 'trending', 'timeline'].map(sub => (
+            <button
+              key={sub}
+              onClick={() => switchTab(activeMain, sub as typeof activeSub)}
+              className={`px-4 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
+                activeSub === sub
+                  ? 'text-indigo-300 border-indigo-300'
+                  : 'text-slate-400 hover:text-slate-300 border-transparent'
+              }`}
+            >
+              {sub === 'search' ? '検索' : sub === 'trending' ? 'トレンド' : 'タイムライン'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 検索フォーム */}
+      {showSearch && (
         <div className="border-b border-slate-800 bg-slate-900/30">
           <div className="p-3 space-y-2">
             <div className="flex gap-2">
-              <input 
-                type="text" 
-                className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none disabled:opacity-60 disabled:cursor-wait"
-                placeholder={activeTab === 'database' ? "Search DB articles..." : "Search Qiita articles..."}
+              <input
+                type="text"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none disabled:opacity-60"
+                placeholder={activeMain === 'database' ? 'Search DB articles...' : 'Search articles...'}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (activeTab === 'database' ? searchDbArticles() : searchQiita())}
+                onKeyDown={(e) => e.key === 'Enter' && fetchArticles()}
                 disabled={loading}
               />
-              <button onClick={() => activeTab === 'database' ? searchDbArticles() : searchQiita()} disabled={loading} className={`bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold transition-colors ${loading ? 'opacity-60 cursor-wait' : 'hover:bg-indigo-500'}`}>
-                {loading ? (
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
-                ) : 'Go'}
+              <button
+                onClick={() => fetchArticles()}
+                disabled={loading}
+                className="bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-500 disabled:opacity-60"
+              >
+                {loading ? <Spinner /> : 'Go'}
               </button>
             </div>
-            
+
             <div className="flex gap-2">
-              <select 
-                value={sort} 
-                onChange={(e) => handleSortChange(e.target.value as any)}
+              <select
+                value={sort}
+                onChange={(e) => handleSort(e.target.value as any)}
                 disabled={loading}
-                className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60 disabled:cursor-wait"
+                className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
               >
                 <option value="rel">関連度順</option>
-                {activeTab === 'database' && <option value="count">新着順</option>}
-                {activeTab === 'qiita-search' && (
-                  <>
-                    <option value="count">いいね順</option>
-                    <option value="created">新着順</option>
-                  </>
-                )}
+                <option value="count">{activeMain === 'database' ? '新着順' : activeMain === 'qiita' ? 'いいね順' : '反応順'}</option>
+                <option value="created">新着順</option>
               </select>
 
-              <select 
-                value={period} 
-                onChange={(e) => handlePeriodChange(e.target.value as any)}
+              <select
+                value={period}
+                onChange={(e) => handlePeriod(e.target.value as any)}
                 disabled={loading}
-                className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60 disabled:cursor-wait"
+                className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
               >
                 <option value="all">全期間</option>
                 <option value="month">1ヶ月以内</option>
@@ -257,13 +206,14 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
         </div>
       )}
 
-      {(activeTab === 'qiita-trending') && (
+      {/* トレンドフィルター */}
+      {showTrendingFilter && (
         <div className="border-b border-slate-800 bg-slate-900/30 p-3">
-          <select 
-            value={period} 
-            onChange={(e) => handlePeriodChange(e.target.value as any)}
+          <select
+            value={period}
+            onChange={(e) => handlePeriod(e.target.value as any)}
             disabled={loading}
-            className="w-full bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60 disabled:cursor-wait"
+            className="w-full bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
           >
             <option value="all">全期間</option>
             <option value="month">1ヶ月以内</option>
@@ -272,59 +222,22 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
         </div>
       )}
 
+      {/* 記事リスト */}
       <div className="flex-1 overflow-y-auto">
         {loading && articles.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-slate-500">読み込み中...</div>
-          </div>
+          <EmptyState>読み込み中...</EmptyState>
         ) : articles.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-slate-500">記事が見つかりません</div>
-          </div>
+          <EmptyState>記事が見つかりません</EmptyState>
         ) : (
           <div className="space-y-3 p-3">
             {articles.map((article: any) => (
-              <div 
-                key={article.id} 
-                onClick={() => onSelectArticle(article)}
-                className="p-4 bg-gradient-to-r from-slate-800/60 to-slate-800/40 hover:from-slate-700/80 hover:to-slate-700/60 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all duration-200 group relative shadow-md hover:shadow-lg hover:shadow-indigo-500/10"
-              >
-                <div className="flex gap-3 items-start">
-                  {activeTab === 'database' && (
-                    <span className="text-[10px] px-2 py-1 rounded font-bold uppercase bg-blue-900/60 text-blue-200 flex-shrink-0 h-fit border border-blue-700/50">
-                      DB
-                    </span>
-                  )}
-                  {(activeTab === 'qiita-search' || activeTab === 'qiita-trending' || activeTab === 'qiita-timeline') && (
-                    <span className="text-[10px] px-2 py-1 rounded font-bold uppercase bg-green-900/60 text-green-200 flex-shrink-0 h-fit border border-green-700/50">
-                      Qiita
-                    </span>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-bold text-slate-100 line-clamp-2 group-hover:text-indigo-300 transition-colors">
-                      {article.title || article.name || 'No title'}
-                    </h3>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400 mt-2 line-clamp-1 truncate">
-                  {article.url || article.link || ''}
-                </p>
-                <div className="text-xs text-slate-500 mt-2 flex gap-4 flex-wrap">
-                  {article.likes_count !== undefined && <span className="flex items-center gap-1"><span>❤️</span> <span className="text-slate-400">{article.likes_count}</span></span>}
-                  {article.views !== undefined && <span className="flex items-center gap-1"><span>👁</span> <span className="text-slate-400">{article.views}</span></span>}
-                  {article.created_at && <span className="text-slate-400">{new Date(article.created_at).toLocaleDateString('ja-JP')}</span>}
-                </div>
-                {activeTab === 'database' && (
-                  <button 
-                    onClick={(e) => handleDeleteArticle(e, article.id)}
-                    className="absolute top-3 right-3 p-1.5 bg-red-600/30 hover:bg-red-500/60 text-red-300 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all duration-200 border border-red-600/40"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
-                    </svg>
-                  </button>
-                )}
-              </div>
+              <ArticleCard
+                key={article.id}
+                article={article}
+                source={activeMain}
+                onSelect={() => onSelectArticle(article)}
+                onDelete={activeMain === 'database' ? (e) => handleDelete(e, article.id) : undefined}
+              />
             ))}
           </div>
         )}
@@ -332,3 +245,66 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
     </div>
   );
 }
+
+const Spinner = () => (
+  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+  </svg>
+);
+
+const EmptyState = ({ children }: { children: string }) => (
+  <div className="flex items-center justify-center h-full">
+    <div className="text-slate-500">{children}</div>
+  </div>
+);
+
+interface ArticleCardProps {
+  article: any;
+  source: 'database' | 'qiita' | 'dev';
+  onSelect: () => void;
+  onDelete?: (e: React.MouseEvent) => void;
+}
+
+const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) => {
+  const badge = { database: 'DB', qiita: 'Qiita', dev: 'Dev.to' }[source];
+  const badgeColor = { database: 'blue', qiita: 'green', dev: 'purple' }[source];
+
+  return (
+    <div
+      onClick={onSelect}
+      className="p-4 bg-gradient-to-r from-slate-800/60 to-slate-800/40 hover:from-slate-700/80 hover:to-slate-700/60 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all duration-200 group relative shadow-md hover:shadow-lg hover:shadow-indigo-500/10"
+    >
+      <div className="flex gap-3 items-start">
+        <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase bg-${badgeColor}-900/60 text-${badgeColor}-200 border border-${badgeColor}-700/50 flex-shrink-0 h-fit`}>
+          {badge}
+        </span>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-bold text-slate-100 line-clamp-2 group-hover:text-indigo-300 transition-colors">
+            {article.title || article.name || 'No title'}
+          </h3>
+        </div>
+      </div>
+      <p className="text-xs text-slate-400 mt-2 line-clamp-1 truncate">{article.url || article.link || ''}</p>
+      <div className="text-xs text-slate-500 mt-2 flex gap-4 flex-wrap">
+        {(article.likes_count !== undefined || article.positive_reactions_count !== undefined) && (
+          <span>❤️ {article.likes_count ?? article.positive_reactions_count ?? 0}</span>
+        )}
+        {article.views !== undefined && <span>👁 {article.views}</span>}
+        {(article.created_at || article.published_at) && (
+          <span>{new Date(article.created_at || article.published_at).toLocaleDateString('ja-JP')}</span>
+        )}
+      </div>
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          className="absolute top-3 right-3 p-1.5 bg-red-600/30 hover:bg-red-500/60 text-red-300 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all duration-200 border border-red-600/40"
+        >
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+};

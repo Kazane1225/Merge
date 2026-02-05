@@ -15,12 +15,16 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
       setContent('');
       return;
     }
+    
+    // DBの記事（数値ID）
     if (typeof targetArticle.id === 'number') {
       fetch(`http://localhost:8080/api/article/${targetArticle.id}`)
         .then((res) => res.ok ? res.json() : [])
         .then((data) => setContent(data && data.length > 0 ? data[0].content : ''))
         .catch(console.error);
-    } else if (targetArticle.url) {
+    } 
+    // QiitaまたはDev.toの記事（URL）
+    else if (targetArticle.url) {
       const safeUrl = encodeURIComponent(targetArticle.url);
       fetch(`http://localhost:8080/api/memos/search?url=${safeUrl}`)
         .then((res) => res.ok ? res.json() : [])
@@ -47,7 +51,7 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
             id: typeof targetArticle.id === 'number' ? targetArticle.id : null,
             title: targetArticle.title,
             url: targetArticle.url,
-            rendered_body: targetArticle.rendered_body
+            rendered_body: targetArticle.rendered_body || targetArticle.body_html
           }
         }),
       });
