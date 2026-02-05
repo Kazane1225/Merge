@@ -268,7 +268,18 @@ interface ArticleCardProps {
 
 const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) => {
   const badge = { database: 'DB', qiita: 'Qiita', dev: 'Dev.to' }[source];
-  const badgeColor = { database: 'blue', qiita: 'green', dev: 'purple' }[source];
+
+  const getBadgeClasses = () => {
+    switch (source) {
+      case 'qiita':
+        return 'bg-green-900/60 text-green-200 border-green-700/50';
+      case 'dev':
+        return 'bg-purple-900/60 text-purple-200 border-purple-700/50';
+      case 'database':
+      default:
+        return 'bg-blue-900/60 text-blue-200 border-blue-700/50';
+    }
+  };
 
   return (
     <div
@@ -276,7 +287,7 @@ const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) 
       className="p-4 bg-gradient-to-r from-slate-800/60 to-slate-800/40 hover:from-slate-700/80 hover:to-slate-700/60 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all duration-200 group relative shadow-md hover:shadow-lg hover:shadow-indigo-500/10"
     >
       <div className="flex gap-3 items-start">
-        <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase bg-${badgeColor}-900/60 text-${badgeColor}-200 border border-${badgeColor}-700/50 flex-shrink-0 h-fit`}>
+        <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border flex-shrink-0 h-fit ${getBadgeClasses()}`}>
           {badge}
         </span>
         <div className="flex-1 min-w-0">
