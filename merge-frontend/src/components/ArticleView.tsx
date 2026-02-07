@@ -13,6 +13,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleSort = (v: typeof sort) => {
     setSort(v);
@@ -40,6 +41,15 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
     setLoading(true);
     setArticles([]);
 
+    // 前の fetch をキャンセル
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // 新しい AbortController を作成
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     let url = '';
     if (activeMain === 'database') {
       if (activeSub === 'search') {
@@ -65,7 +75,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       }
     }
 
-    fetch(url)
+    fetch(url, { signal: abortController.signal })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -83,9 +93,15 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
             new Date(a.created_at ?? a.published_at ?? 0).getTime()
           );
         }
+        console.log('API Response:', sorted);
         setArticles(sorted);
       })
-      .catch(err => console.error('Fetch error:', err))
+      .catch(err => {
+        // AbortError は無視（キャンセルされたリクエスト）
+        if (err.name !== 'AbortError') {
+          console.error('Fetch error:', err);
+        }
+      })
       .finally(() => setLoading(false));
   };
 
@@ -112,8 +128,19 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
 
   useEffect(() => {
     resetState();
-    fetchArticles();
+    if (activeMain === 'database' || activeSub !== 'search') {
+      fetchArticles();
+    }
   }, [activeMain, activeSub]);
+
+  // cleanup: コンポーネント アンマウント時に pending requests をキャンセル
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const showSearch = (activeMain === 'qiita' || activeMain === 'dev' || activeMain === 'database') && activeSub === 'search';
   const showTrendingFilter = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'trending';

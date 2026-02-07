@@ -15,6 +15,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -32,10 +33,11 @@ public class QiitaServiceImpl implements QiitaService {
 
     @Override
     public List<QiitaItem> searchArticles(String keyword, String sort, String period) {
-        StringBuilder queryBuilder = new StringBuilder();
+        StringBuilder baseQueryBuilder = new StringBuilder();
         
+        // 1. ベースクエリ構築
         if (keyword != null && !keyword.isEmpty()) {
-            queryBuilder.append(keyword);
+            baseQueryBuilder.append(keyword);
         }
 
         if (!"all".equals(period)) {
@@ -46,20 +48,67 @@ public class QiitaServiceImpl implements QiitaService {
                 sinceDate = sinceDate.minusMonths(1);
             }
             
-            if (queryBuilder.length() > 0) {
-                queryBuilder.append(" ");
+            if (baseQueryBuilder.length() > 0) {
+                baseQueryBuilder.append(" ");
             }
-            queryBuilder.append("created:>=").append(sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
+            baseQueryBuilder.append("created:>=").append(sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
         }
 
+        String baseQuery = baseQueryBuilder.toString();
+        List<QiitaItem> items;
+
+        // 2. いいね順 (count) の場合
+        if ("count".equals(sort)) {
+            // 【STEP 1】まずは厳しめの条件(stocks>=20)で検索
+            // 全期間(all)なら殿堂入りクラス(100以上)、それ以外ならトレンド(20以上)を狙う
+            int firstThreshold = "all".equals(period) ? 100 : 20;
+            String queryHigh = (baseQuery + " stocks:>=" + firstThreshold).trim();
+            items = fetchItemsWithQuery(queryHigh);
+
+            // 【STEP 2】件数判定とリトライ
+            // 「50件未満」の場合のみ、条件を緩めて再検索する
+            // (100件取れた場合はここに入らず、そのままソートに進むのでOK)
+            if (items.size() < 50) {
+                
+                // 1段階緩める (allなら20、その他なら5)
+                int secondThreshold = "all".equals(period) ? 20 : 5;
+                String queryMid = (baseQuery + " stocks:>=" + secondThreshold).trim();
+                List<QiitaItem> retryItems = fetchItemsWithQuery(queryMid);
+
+                // それでも極端に少ない(10件未満)なら、最終手段でフィルタなし
+                if (retryItems.size() < 10) {
+                    String queryFallback = (baseQuery + " stocks:>=0").trim();
+                    items = fetchItemsWithQuery(queryFallback);
+                } else {
+                    items = retryItems;
+                }
+            }
+
+            // 【STEP 3】Java側でソート
+            List<QiitaItem> sortedItems = new ArrayList<>(items);
+            sortedItems.sort((a, b) -> {
+                Integer likesA = a.getLikesCount();
+                Integer likesB = b.getLikesCount();
+                int countA = likesA != null ? likesA : 0;
+                int countB = likesB != null ? likesB : 0;
+                return Integer.compare(countB, countA); // 降順
+            });
+            return sortedItems;
+        }
+
+        // 3. 通常検索
+        items = fetchItemsWithQuery(baseQuery);
+        return items;
+    }
+
+    // ヘルパーメソッド
+    private List<QiitaItem> fetchItemsWithQuery(String rawQuery) {
         try {
-            String rawQuery = queryBuilder.toString();
             String encodedQuery = URLEncoder.encode(rawQuery, StandardCharsets.UTF_8)
                                             .replace("+", "%20");
-
+            
             String urlStr = QIITA_API_URL + "?page=1&per_page=100&query=" + encodedQuery;
             return fetchFromQiita(URI.create(urlStr));
-
         } catch (Exception e) {
             logger.severe("Encoding error: " + e.getMessage());
             return Collections.emptyList();
@@ -75,6 +124,7 @@ public class QiitaServiceImpl implements QiitaService {
     public List<QiitaItem> getHotArticles(String period) {
         LocalDate sinceDate;
 
+        // 期間の計算
         if ("week".equals(period)) {
             sinceDate = LocalDate.now().minusWeeks(1);
         } else if ("month".equals(period)) {
@@ -83,17 +133,36 @@ public class QiitaServiceImpl implements QiitaService {
             sinceDate = LocalDate.now().minusYears(1);
         }
 
-        String rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=30";
+        // クエリ構築
+        // stocks:>=20 で足切りをして、少なくとも20ストック以上ある記事をAPIから「新着順」で取得します
+        String rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=20";
 
         try {
             String encodedQuery = URLEncoder.encode(rawQuery, StandardCharsets.UTF_8)
                                             .replace("+", "%20");
 
+            // APIリクエスト (API仕様上、ここではまだ新着順で返ってきます)
             String urlStr = QIITA_API_URL + "?page=1&per_page=100&query=" + encodedQuery;
-            return fetchFromQiita(URI.create(urlStr));
+            List<QiitaItem> items = fetchFromQiita(URI.create(urlStr));
+
+            // 【重要】Java側でソート処理
+            // fetchFromQiitaの戻り値がImmutable(変更不可)な可能性があるため、新しいArrayListでラップします
+            List<QiitaItem> sortedItems = new ArrayList<>(items);
+            
+            // likes_count (いいね数) の降順（多い順）に並び替え
+            sortedItems.sort((a, b) -> {
+                // nullチェックを含めた比較
+                Integer likesA = a.getLikesCount();
+                Integer likesB = b.getLikesCount();
+                int countA = likesA != null ? likesA : 0;
+                int countB = likesB != null ? likesB : 0;
+                return Integer.compare(countB, countA); // 降順 (B - A)
+            });
+
+            return sortedItems;
 
         } catch (Exception e) {
-            logger.severe("Encoding error: " + e.getMessage());
+            logger.severe("Encoding or Sorting error: " + e.getMessage());
             return Collections.emptyList();
         }
     }

@@ -3,12 +3,23 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
+  const [showArticleBody, setShowArticleBody] = useState(false);
+
+  useEffect(() => {
+    console.log('targetArticle updated:', targetArticle);
+    if (targetArticle) {
+      console.log('rendered_body:', targetArticle.rendered_body);
+      console.log('body_html:', targetArticle.body_html);
+    }
+  }, [targetArticle]);
 
   useEffect(() => {
     if (!targetArticle) {
@@ -34,6 +45,22 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
       setContent('');
     }
   }, [targetArticle]);
+
+  useEffect(() => {
+    if (showArticleBody && (targetArticle?.rendered_body || targetArticle?.body_html)) {
+      // Twitter Embed スクリプトをロード
+      if (typeof window !== 'undefined' && (window as any).twttr) {
+        setTimeout(() => {
+          (window as any).twttr.widgets.load();
+        }, 0);
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://platform.twitter.com/widgets.js';
+        script.async = true;
+        document.body.appendChild(script);
+      }
+    }
+  }, [showArticleBody, targetArticle?.rendered_body, targetArticle?.body_html]);
 
   const handleSave = async () => {
     if (!content) return;
@@ -88,11 +115,19 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
             WRITE
           </button>
           <button
-            onClick={() => setIsPreview(true)}
-            className={`text-[10px] px-3 py-1 rounded transition-all ${isPreview ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+            onClick={() => { setIsPreview(true); setShowArticleBody(false); }}
+            className={`text-[10px] px-3 py-1 rounded transition-all ${isPreview && !showArticleBody ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
           >
             PREVIEW
           </button>
+          {targetArticle && (targetArticle.rendered_body || targetArticle.body_html) && (
+            <button
+              onClick={() => { setIsPreview(true); setShowArticleBody(true); }}
+              className={`text-[10px] px-3 py-1 rounded transition-all ${isPreview && showArticleBody ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              ARTICLE
+            </button>
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -157,10 +192,66 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
             onChange={(e) => setContent(e.target.value)}
             spellCheck={false}
           />
+        ) : showArticleBody && (targetArticle.rendered_body || targetArticle.body_html) ? (
+          <div className="w-full h-full p-6 overflow-y-auto custom-scrollbar bg-[#0B1120]">
+            <div className="article-body text-sm text-slate-300 prose prose-invert max-w-none">
+              <div 
+                dangerouslySetInnerHTML={{ 
+                  __html: targetArticle.rendered_body || targetArticle.body_html || ''
+                }} 
+                className="prose prose-invert max-w-none
+                  prose-p:text-slate-300 prose-p:mb-3
+                  prose-headings:text-slate-100 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                  prose-strong:text-slate-200 prose-strong:font-bold
+                  prose-em:text-slate-300 prose-em:italic
+                  prose-code:text-amber-300 prose-code:bg-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded
+                  prose-pre:bg-slate-800 prose-pre:text-slate-300 prose-pre:p-4 prose-pre:rounded prose-pre:overflow-x-auto
+                  prose-blockquote:text-slate-400 prose-blockquote:border-l-4 prose-blockquote:border-slate-600 prose-blockquote:pl-4 prose-blockquote:italic
+                  prose-a:text-indigo-400 prose-a:hover:text-indigo-300 prose-a:underline
+                  prose-img:rounded prose-img:shadow-lg
+                  prose-li:text-slate-300
+                  prose-table:border prose-table:border-slate-700
+                  prose-thead:bg-slate-800
+                  prose-th:border prose-th:border-slate-700 prose-th:text-slate-200 prose-th:p-2
+                  prose-td:border prose-td:border-slate-700 prose-td:p-2
+                  [&_blockquote]:border-l-4 [&_blockquote]:border-indigo-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-400
+                  [&_iframe]:w-full [&_iframe]:rounded [&_iframe]:mt-4 [&_iframe]:mb-4
+                "
+              />
+            </div>
+          </div>
         ) : (
           <div className="w-full h-full p-6 overflow-y-auto custom-scrollbar bg-[#0B1120]">
             <div className="qiita-content text-sm">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code(props: any) {
+                    const {node, inline, className, children, ...rest} = props;
+                    const match = /language-(\w+)/.exec(className || '');
+                    const language = match ? match[1] : 'text';
+                    
+                    if (!inline && match) {
+                      return (
+                        <SyntaxHighlighter
+                          style={atomOneDark as any}
+                          language={language}
+                          PreTag="div"
+                          className="rounded-lg my-3 !bg-slate-900 !p-4"
+                          {...rest}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      );
+                    }
+                    return (
+                      <code className="bg-slate-800 text-amber-300 px-2 py-1 rounded text-xs font-mono" {...rest}>
+                        {children}
+                      </code>
+                    );
+                  }
+                }}
+              >
                 {content || '*No content*'}
               </ReactMarkdown>
             </div>

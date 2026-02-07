@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -30,7 +31,7 @@ public class DevServiceImpl implements DevService {
     @Override
     public List<DevItem> searchArticles(String keyword, String sort, String period) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
-                .queryParam("per_page", 100);
+                .queryParam("per_page", 300);
 
         if (keyword != null && !keyword.isEmpty()) {
             builder.queryParam("tag", keyword);
@@ -56,16 +57,25 @@ public class DevServiceImpl implements DevService {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL);
 
         if ("all".equals(period)) {
-            builder.queryParam("per_page", 500);
+            builder.queryParam("per_page", 1000);
         } else {
-            builder.queryParam("per_page", 100);
+            builder.queryParam("per_page", 500);
             Integer days = convertPeriodToDays(period);
             if (days != null) {
                 builder.queryParam("top", days);
             }
         }
 
-        return fetchFromDev(builder.build().toUri());
+        List<DevItem> devItems = fetchFromDev(builder.build().toUri());
+
+        List<DevItem> sortedItems = new ArrayList<>(devItems);
+        return sortedItems.stream().sorted((a, b) -> {
+            Integer likesA = a.getLikesCount();
+            Integer likesB = b.getLikesCount();
+            int countA = likesA != null ? likesA : 0;
+            int countB = likesB != null ? likesB : 0;
+            return Integer.compare(countB, countA);
+        }).toList();
     }
 
     @Override
