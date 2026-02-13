@@ -12,19 +12,14 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
   const [sort, setSort] = useState<'rel' | 'count' | 'created'>('rel');
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
   const [loading, setLoading] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleSort = (v: typeof sort) => {
     setSort(v);
-    clearTimeout(debounceRef.current ?? undefined);
-    debounceRef.current = setTimeout(() => fetchArticles({ sort: v }), 300);
   };
 
   const handlePeriod = (v: typeof period) => {
     setPeriod(v);
-    clearTimeout(debounceRef.current ?? undefined);
-    debounceRef.current = setTimeout(() => fetchArticles({ period: v }), 300);
   };
 
   const resetState = () => {
@@ -128,9 +123,6 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
 
   useEffect(() => {
     resetState();
-    if (activeMain === 'database' || activeSub !== 'search') {
-      fetchArticles();
-    }
   }, [activeMain, activeSub]);
 
   // cleanup: コンポーネント アンマウント時に pending requests をキャンセル
@@ -144,6 +136,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
 
   const showSearch = (activeMain === 'qiita' || activeMain === 'dev' || activeMain === 'database') && activeSub === 'search';
   const showTrendingFilter = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'trending';
+  const showSimpleGo = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'timeline';
 
   return (
     <div className="w-full h-full bg-[#0F172A] flex flex-col">
@@ -236,16 +229,38 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       {/* トレンドフィルター */}
       {showTrendingFilter && (
         <div className="border-b border-slate-800 bg-slate-900/30 p-3">
-          <select
-            value={period}
-            onChange={(e) => handlePeriod(e.target.value as any)}
+          <div className="space-y-2">
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as any)}
+              disabled={loading}
+              className="w-full bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
+            >
+              <option value="all">全期間</option>
+              <option value="month">1ヶ月以内</option>
+              <option value="week">1週間以内</option>
+            </select>
+            <button
+              onClick={() => fetchArticles()}
+              disabled={loading}
+              className="w-full bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-500 disabled:opacity-60"
+            >
+              {loading ? <Spinner /> : 'Go'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Timeline用Goボタン */}
+      {showSimpleGo && (
+        <div className="border-b border-slate-800 bg-slate-900/30 p-3">
+          <button
+            onClick={() => fetchArticles()}
             disabled={loading}
-            className="w-full bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
+            className="w-full bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-500 disabled:opacity-60"
           >
-            <option value="all">全期間</option>
-            <option value="month">1ヶ月以内</option>
-            <option value="week">1週間以内</option>
-          </select>
+            {loading ? <Spinner /> : 'Go'}
+          </button>
         </div>
       )}
 

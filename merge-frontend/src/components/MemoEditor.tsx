@@ -78,7 +78,8 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
             id: typeof targetArticle.id === 'number' ? targetArticle.id : null,
             title: targetArticle.title,
             url: targetArticle.url,
-            rendered_body: targetArticle.rendered_body || targetArticle.body_html
+            rendered_body: targetArticle.rendered_body || targetArticle.body_html,
+            cover_image: targetArticle.cover_image || targetArticle.coverImage
           }
         }),
       });

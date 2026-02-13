@@ -35,4 +35,8 @@ public class Article extends BaseEntity {
     @JsonProperty("rendered_body")
     private String renderedBody;
 
+    @Column(name = "cover_image", columnDefinition = "TEXT")
+    @JsonProperty("cover_image")
+    private String coverImage;
+
 }

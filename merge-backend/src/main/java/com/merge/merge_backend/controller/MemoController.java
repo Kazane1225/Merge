@@ -55,7 +55,13 @@ public class MemoController {
             Article existingArticle = articleRepository.findByUrl(article.getUrl());
             
             if (existingArticle != null) {
-                article = existingArticle;
+                // 既存記事の内容を更新（特にcover_imageなど）
+                existingArticle.setTitle(article.getTitle());
+                existingArticle.setRenderedBody(article.getRenderedBody());
+                if (article.getCoverImage() != null) {
+                    existingArticle.setCoverImage(article.getCoverImage());
+                }
+                article = articleRepository.save(existingArticle);
             } else {
                 article = articleRepository.save(article);
             }
