@@ -1,63 +1,82 @@
 # Merge_
 
-<div align="center">
-  <img src="https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white" />
-  <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" />
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
-</div>
-
-<br />
-
 > **記事と知見を、ひとつにマージする。**
-> 
-> Merge は、技術記事の閲覧と個人のナレッジ管理をシームレスに統合する、エンジニアのための開発支援プラットフォームです。
+>
+> Merge は、技術記事（Qiita / Dev.to / 保存済みDB）を読む・比較する・メモするを 1 画面で完結させる、ローカル実行前提のナレッジ管理アプリです。
 
-<br />
+## 📸 UI
 
-## 📸 Screen Shots
-
-| 記事閲覧 & メモ作成 | ダークモード UI |
-| :---: | :---: |
-| <img src="./assets/screenshot_main.jpg" alt="Main UI" width="400"/> | <img src="./assets/screenshot_editor.jpg" alt="Editor UI" width="400"/> |
+![Merge UI](./UI_v1.png)
 
 ## ✨ Features
 
-- **Qiita Search Integration**: Qiitaの記事をアプリ内から直接検索・閲覧。ブラウザのタブを行き来する必要はありません。
-- **Dual-Pane Knowledge Base**: 左画面で記事を読みながら、右画面でリアルタイムにメモを取れる2ペイン構成。
-- **Smart Memo Restoration**: 記事を選択すると、過去に書いたメモが自動的に復元されます。思考のコンテキストを失いません。
-- **Markdown Editor**: コードブロックやリストに対応したMarkdownエディタと、リアルタイムプレビュー機能を搭載。
-- **Persistent Storage**: 記事データ（HTML）とメモはPostgreSQLに保存され、オフラインでも自分のナレッジとして参照可能。
-- **Developer-Centric UI**: 長時間の作業でも目が疲れにくい、IDEライクなダークテーマを採用。
+- **記事ソース切り替え**: Database / Qiita / Dev.to を左サイドバーから切り替え
+- **検索 / トレンド / タイムライン**: Qiita・Dev.to はサブタブで切り替え、期間/並び替えも指定可能
+- **タブ閲覧**: 記事をタブで開いて切り替え（上限あり）
+- **比較表示（Split View）**: 2 本の記事を左右に並べて比較
+- **履歴ビュー**: 最近開いた記事の履歴を表示（ブラウザ保存）
+- **グラフビュー**: 閲覧中/履歴の関係をネットワークで可視化
+- **メモ**: Markdown で記録し、記事ごとに復元。DBに保存
+- **埋め込み表示**: Qiita の埋め込み（Twitter / link card 等）を表示できる形に変換
+
+## 🧱 Architecture
+
+- Frontend: Next.js（開発サーバ）
+- Backend: Spring Boot（REST API）
+- DB: PostgreSQL（docker-compose）
+- Optional: pgAdmin（docker-compose）
 
 ## 🛠 Tech Stack
 
-### Frontend
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Markdown**: react-markdown, remark-gfm
-
-### Backend
-- **Framework**: Spring Boot 3
-- **Language**: Java 25
-- **Database**: PostgreSQL
-- **ORM**: Spring Data JPA
-
-### Infrastructure
-- **Containerization**: Docker, Docker Compose
+- Frontend: Next.js / React / TypeScript / Tailwind CSS / highlight.js / react-markdown
+- Backend: Spring Boot / Java 25 / Spring Data JPA
+- Infra: Docker Compose / PostgreSQL
 
 ## 🚀 Getting Started
 
-このプロジェクトは Docker Compose を使用して一発で起動できるように設計されています。
-
 ### Prerequisites
-- Docker & Docker Compose
-- Qiita Access Token (Optional but recommended)
 
-### Installation
+- Docker
+- Node.js（フロント開発用）
 
-1. **リポジトリをクローン**
-   ```bash
-   git clone [https://github.com/your-username/Merge.git](https://github.com/your-username/Merge.git)
-   cd Merge
+### 1) 環境変数を用意
+
+`.env.example` を `.env` にコピーして編集します（トークンは任意）。
+
+### 2) Backend + DB を起動（Docker）
+
+```bash
+docker compose up --build -d
+```
+
+- Backend: http://localhost:8080
+- pgAdmin: http://localhost:8081
+- PostgreSQL: localhost:5432
+
+### 3) Frontend を起動（ローカル）
+
+別ターミナルで:
+
+```bash
+cd merge-frontend
+npm install
+npm run dev
+```
+
+Frontend: http://localhost:3000
+
+## 🔌 API（Backend）
+
+フロントは主に以下を利用します。
+
+- `GET /api/articles`（DB記事一覧）
+- `GET /api/articles/search`（DB記事検索）
+- `GET /api/qiita/search|hot|timeline|article/{id}`
+- `GET /api/dev/search|hot|timeline|article/{id}`
+- `GET /api/memos/search?url=...`（URLからメモ取得）
+- `POST /api/memos`（メモ保存）
+
+## Notes
+
+- `.env` には個人トークンが入るため、コミットしないでください。
+- DBデータは `infra/postgres/data` に永続化されます。

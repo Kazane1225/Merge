@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Merge Frontend
+
+Merge のフロントエンド（Next.js）です。Backend（Spring Boot）と通信して記事検索・メモ保存を行います。
+
+- Frontend: http://localhost:3000
+- Backend(API): http://localhost:8080
+
+## Requirements
+
+- Node.js
+- Backend が起動していること（ルートで `docker compose up --build -d`）
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `npm run dev` 開発サーバ起動
+- `npm run build` ビルド
+- `npm run start` 本番起動（build後）
+- `npm run lint` ESLint
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## API
 
-## Learn More
+フロントは主に以下のエンドポイントを利用します。
 
-To learn more about Next.js, take a look at the following resources:
+- `GET /api/articles` / `GET /api/articles/search`
+- `GET /api/qiita/search|hot|timeline|article/{id}`
+- `GET /api/dev/search|hot|timeline|article/{id}`
+- `GET /api/memos/search?url=...`
+- `POST /api/memos`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Where to look
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- UI本体: `src/app/page.tsx`
+- 左サイドバー（記事一覧/検索）: `src/components/ArticleView.tsx`
+- メモ: `src/components/MemoEditor.tsx`
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- API のベースURLは現状 `http://localhost:8080/api` を前提にしています。
+- リポジトリ全体の起動方法はルートの README を参照してください。
