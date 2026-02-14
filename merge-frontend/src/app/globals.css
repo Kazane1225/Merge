@@ -1,40 +1,116 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: dark;
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background-color: #0b1120;
+  background-image:
+    radial-gradient(1200px 700px at 10% 0%, rgba(14, 165, 233, 0.12), transparent 60%),
+    radial-gradient(900px 600px at 90% 12%, rgba(245, 158, 11, 0.10), transparent 55%),
+    radial-gradient(700px 500px at 50% 80%, rgba(34, 197, 94, 0.08), transparent 55%);
+  background-attachment: fixed;
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(transparent 0%, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.app-shell header {
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.35);
+  border-bottom-color: rgba(148, 163, 184, 0.2);
+  background-color: rgba(11, 17, 32, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.app-shell aside {
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.35);
+  background-color: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-right-color: rgba(148, 163, 184, 0.18);
+  border-left-color: rgba(148, 163, 184, 0.18);
+}
+
+.app-shell header::after,
+.app-shell aside::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 45%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.app-shell button {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.app-shell button:hover {
+  transform: translateY(-1px);
+}
+
+.app-shell button:active {
+  transform: translateY(0);
+}
+
 .qiita-content {
   color: #e2e8f0; 
-  line-height: 1.625;
-  background-color: #0f172a;
-  padding: 2rem;
-  border-radius: 0.75rem;
-  max-width: 900px;
+  line-height: 1.85;
+  background: linear-gradient(140deg, rgba(15, 23, 42, 0.78), rgba(8, 12, 24, 0.7));
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  padding: 2.5rem;
+  border-radius: 1rem;
+  max-width: 960px;
   margin: 0 auto;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 22px 60px rgba(2, 6, 23, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .qiita-content h1 {
-  font-size: 1.5rem;
-  line-height: 2rem;
+  font-size: 1.8rem;
+  line-height: 2.4rem;
   font-weight: 700;
   margin-top: 2.5rem;
   margin-bottom: 1.5rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid #475569;
+  border-bottom: 2px solid rgba(129, 140, 248, 0.35);
   color: #f1f5f9;
 }
 
 .qiita-content h2 {
-  font-size: 1.25rem;
-  line-height: 1.75rem;
+  font-size: 1.4rem;
+  line-height: 2.1rem;
   font-weight: 700;
   margin-top: 2rem;
   margin-bottom: 1rem;
   padding-left: 1rem;
-  border-left: 4px solid #818cf8;
+  border-left: 4px solid rgba(129, 140, 248, 0.7);
   color: #e0e7ff;
 }
 
 .qiita-content h3 {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
+  font-size: 1.2rem;
+  line-height: 1.9rem;
   font-weight: 700;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
@@ -80,7 +156,7 @@
   margin-bottom: 1.5rem;
   max-width: 100%;
   height: auto;
-  border: 1px solid #334155;
+  border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 .qiita-content blockquote {
@@ -90,9 +166,10 @@
   margin-top: 1rem;
   margin-bottom: 1rem;
   font-style: italic;
-  border-left: 4px solid #475569;
+  border-left: 4px solid rgba(99, 102, 241, 0.7);
   color: #cbd5e1;
   background-color: rgba(30, 41, 59, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .qiita-content .code-frame {
@@ -124,7 +201,7 @@
   font-size: 0.875rem;
   line-height: 1.6;
   color: #e2e8f0;
-  background: #2d2d30;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
   border: 1px solid #3c3c3c;
   border-radius: 0.5rem;
   margin: 1rem 0;
@@ -171,9 +248,10 @@
   color: inherit;
 }
 .qiita-content p {
-  margin-top: 1.25rem;
-  margin-bottom: 1.25rem;
-  line-height: 1.8; /* 読みやすく */
+  margin-top: 1.35rem;
+  margin-bottom: 1.35rem;
+  line-height: 1.95;
+  letter-spacing: 0.01em;
 }
 
 /* 画像の最大幅制限とセンタリング */
@@ -184,7 +262,7 @@
   max-width: 100%;
   height: auto;
   border-radius: 0.5rem;
-  border: 1px solid #334155;
+  border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 /* Dev.toのコードブロック (pre タグ) */
@@ -193,7 +271,7 @@
   margin-bottom: 1rem;
   padding: 1rem;
   border-radius: 0.5rem;
-  background: #2d2d30;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
   border: 1px solid #3c3c3c;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   overflow-x: auto;
@@ -247,7 +325,7 @@
   margin: 1.5rem auto;
   border-radius: 0.75rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  border: 1px solid #334155;
+  border: 1px solid rgba(148, 163, 184, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -265,12 +343,12 @@
   border-radius: 0.5rem;
   overflow: hidden;
   border: 1px solid #334155;
-  background-color: #1e293b;
+  background-color: rgba(15, 23, 42, 0.75);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .qiita-content table thead {
-  background-color: #1e293b;
+  background-color: rgba(30, 41, 59, 0.85);
   border-bottom: 2px solid #475569;
 }
 
@@ -319,7 +397,7 @@
 .qiita-content hr {
   border: none;
   height: 1px;
-  background: linear-gradient(to right, transparent, #475569, transparent);
+  background: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.4), transparent);
   margin-top: 2rem;
   margin-bottom: 2rem;
 }
