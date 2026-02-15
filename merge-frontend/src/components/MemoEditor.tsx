@@ -12,6 +12,8 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
   const [showGuide, setShowGuide] = useState(false);
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
   const [showArticleBody, setShowArticleBody] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     // No-op effect to trigger when targetArticle changes
@@ -58,12 +60,18 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
     }
   }, [showArticleBody, targetArticle?.rendered_body, targetArticle?.body_html]);
 
+  // メモが更新されたらisSavedをリセット
+  useEffect(() => {
+    setIsSaved(false);
+  }, [content]);
+
   const handleSave = async () => {
-    if (!content) return;
     if (!targetArticle) {
       alert("記事が選択されていません");
       return;
     }
+    
+    setIsSaving(true);
     try {
       const response = await fetch('http://localhost:8080/api/memos', {
         method: 'POST',
@@ -79,9 +87,14 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
           }
         }),
       });
-      if (response.ok) alert('Saved successfully!');
+      
+      if (response.ok) {
+        setIsSaved(true);
+      }
     } catch (error) {
       // Handle error silently
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -137,10 +150,23 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
           </button>
           <button 
             onClick={handleSave}
-            disabled={!targetArticle}
-            className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs px-3 py-1.5 rounded-sm transition-colors font-medium tracking-wide"
+            disabled={!targetArticle || isSaving || isSaved}
+            className={`text-white text-xs px-3 py-1.5 rounded-sm transition-all font-medium tracking-wide flex items-center gap-1.5 ${
+              isSaved ? 'bg-green-600' : isSaving ? 'bg-indigo-600' : 'bg-emerald-600 hover:bg-emerald-500'
+            } disabled:opacity-70 cursor-default`}
           >
-            SAVE
+            {isSaving && (
+              <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+            )}
+            {isSaved && (
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+              </svg>
+            )}
+            {isSaving ? 'SAVING...' : isSaved ? 'SAVED' : 'SAVE'}
           </button>
         </div>
       </div>

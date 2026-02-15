@@ -57,10 +57,10 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
       );
 
       // YouTubeサムネイル画像を高解像度版に置き換え
-      // maxresdefault.jpg (1280x720) -> sddefault.jpg (640x480) -> hqdefault.jpg (480x360) の順でフォールバック
+      // サムネイル品質：maxresdefault (1280x720) -> sddefault (640x480) -> hqdefault (480x360) -> mqdefault (320x180)
       html = html.replace(
         /src="https:\/\/(?:img|i)\.youtube\.com\/vi\/([^/]+)\/(?:default|mqdefault|sddefault|hqdefault|maxresdefault)\.(?:jpg|webp)"/gi,
-        'src="https://i.ytimg.com/vi/$1/maxresdefault.jpg" onerror="this.onerror=null;this.src=\'https://i.ytimg.com/vi/$1/sddefault.jpg\';this.onerror=function(){this.onerror=null;this.src=\'https://i.ytimg.com/vi/$1/hqdefault.jpg\';};"'
+        'src="https://i.ytimg.com/vi/$1/maxresdefault.jpg" onerror="this.onerror=null;const id=\'$1\';const sizes=[\'sddefault\',\'hqdefault\',\'mqdefault\'];let idx=0;const tryNext=()=>{if(idx<sizes.length){this.src=`https://i.ytimg.com/vi/${id}/${sizes[idx]}.jpg`;idx++;}};this.onerror=tryNext;"'
       );
 
       setProcessedHtml(html);
