@@ -36,7 +36,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
           setDbArticles(articles);
         }
       } catch (error) {
-        console.error('Failed to fetch DB articles:', error);
+        // Error handling done silently
       } finally {
         setLoading(false);
       }

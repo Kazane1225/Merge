@@ -88,14 +88,11 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
             new Date(a.created_at ?? a.published_at ?? 0).getTime()
           );
         }
-        console.log('API Response:', sorted);
         setArticles(sorted);
       })
       .catch(err => {
         // AbortError は無視（キャンセルされたリクエスト）
-        if (err.name !== 'AbortError') {
-          console.error('Fetch error:', err);
-        }
+        // Error handling done silently
       })
       .finally(() => setLoading(false));
   };

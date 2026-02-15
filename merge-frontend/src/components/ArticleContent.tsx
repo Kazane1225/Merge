@@ -77,30 +77,22 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
   // Twitter埋め込みスクリプトの読み込みと再レンダリング
   useEffect(() => {
     if (!processedHtml.includes('twitter-tweet')) {
-      console.log('[Twitter] No tweets found in HTML');
       return;
     }
-
-    console.log('[Twitter] Processing tweets...');
 
     const loadTwitterWidgets = () => {
       const twttr = (window as any).twttr;
       if (!twttr || !twttr.widgets) {
-        console.warn('[Twitter] widgets API not available yet');
         return false;
       }
-
-      console.log('[Twitter] widgets API available, loading...');
       
       // contentRef内のツイートを確認
       if (contentRef.current) {
         const tweetContainers = contentRef.current.querySelectorAll('.twitter-tweet');
-        console.log(`[Twitter] Found ${tweetContainers.length} tweet blockquotes`);
         
         tweetContainers.forEach((blockquote, index) => {
           // 既にレンダリング済みかチェック
           if (blockquote.hasAttribute('data-tweet-rendered')) {
-            console.log(`[Twitter] Tweet ${index} already rendered, skipping`);
             return;
           }
           
@@ -108,18 +100,14 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
           const tweetUrl = link?.getAttribute('href');
           
           if (!tweetUrl) {
-            console.error(`[Twitter] Tweet ${index} has no link`);
             return;
           }
           
           // ツイートIDを抽出
           const tweetId = tweetUrl.split('/status/')[1]?.split('?')[0];
           if (!tweetId) {
-            console.error(`[Twitter] Failed to extract ID from: ${tweetUrl}`);
             return;
           }
-          
-          console.log(`[Twitter] Rendering tweet ${index}, ID: ${tweetId}`);
           
           // レンダリング中フラグを立てる
           blockquote.setAttribute('data-tweet-rendered', 'true');
@@ -127,7 +115,6 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
           // blockquoteの親要素を取得
           const parent = blockquote.parentElement;
           if (!parent) {
-            console.error(`[Twitter] Tweet ${index} has no parent`);
             return;
           }
           
@@ -150,16 +137,11 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
               align: 'center'
             }
           ).then((element: any) => {
-            if (element) {
-              console.log(`[Twitter] ✓ Tweet ${index} rendered successfully, ID: ${tweetId}`);
-              console.log(`[Twitter] Created element:`, element);
-            } else {
-              console.error(`[Twitter] ✗ createTweet returned null for ID: ${tweetId}`);
+            if (!element) {
               // nullの場合、元のblockquoteを復元
               container.appendChild(blockquote);
             }
           }).catch((err: any) => {
-            console.error(`[Twitter] ✗ Failed to render tweet ${index}:`, err);
             // エラーの場合、元のblockquoteを復元
             container.appendChild(blockquote);
           });
@@ -172,7 +154,6 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
     // スクリプトの読み込みと初期化
     const existingScript = document.getElementById('twitter-wjs');
     if (!existingScript) {
-      console.log('[Twitter] Loading script...');
       const script = document.createElement('script');
       script.id = 'twitter-wjs';
       script.src = 'https://platform.twitter.com/widgets.js';
@@ -180,19 +161,13 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
       script.charset = 'utf-8';
       
       script.onload = () => {
-        console.log('[Twitter] Script loaded successfully');
         setTimeout(() => {
           loadTwitterWidgets();
         }, 150);
       };
       
-      script.onerror = () => {
-        console.error('[Twitter] Failed to load script');
-      };
-      
       document.body.appendChild(script);
     } else {
-      console.log('[Twitter] Script already exists');
       // スクリプトが既にロードされている場合
       if ((window as any).twttr?.widgets) {
         setTimeout(() => {
@@ -203,12 +178,10 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
         let attempts = 0;
         const checkInterval = setInterval(() => {
           attempts++;
-          console.log(`[Twitter] Waiting for API... attempt ${attempts}`);
           if (loadTwitterWidgets()) {
             clearInterval(checkInterval);
           }
           if (attempts >= 30) {
-            console.error('[Twitter] Timeout waiting for API');
             clearInterval(checkInterval);
           }
         }, 200);

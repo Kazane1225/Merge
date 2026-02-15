@@ -14,11 +14,7 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
   const [showArticleBody, setShowArticleBody] = useState(false);
 
   useEffect(() => {
-    console.log('targetArticle updated:', targetArticle);
-    if (targetArticle) {
-      console.log('rendered_body:', targetArticle.rendered_body);
-      console.log('body_html:', targetArticle.body_html);
-    }
+    // No-op effect to trigger when targetArticle changes
   }, [targetArticle]);
 
   useEffect(() => {
@@ -32,7 +28,7 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
       fetch(`http://localhost:8080/api/article/${targetArticle.id}`)
         .then((res) => res.ok ? res.json() : [])
         .then((data) => setContent(data && data.length > 0 ? data[0].content : ''))
-        .catch(console.error);
+        .catch(() => {});
     } 
     // QiitaまたはDev.toの記事（URL）
     else if (targetArticle.url) {
@@ -40,7 +36,7 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
       fetch(`http://localhost:8080/api/memos/search?url=${safeUrl}`)
         .then((res) => res.ok ? res.json() : [])
         .then((data) => setContent(data && data.length > 0 ? data[0].content : ''))
-        .catch(console.error);
+        .catch(() => {});
     } else {
       setContent('');
     }
@@ -85,7 +81,7 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
       });
       if (response.ok) alert('Saved successfully!');
     } catch (error) {
-      console.error('Error:', error);
+      // Handle error silently
     }
   };
 

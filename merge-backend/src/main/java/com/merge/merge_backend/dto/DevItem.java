@@ -28,10 +28,6 @@ public class DevItem {
 
     private String description;
 
-    // 【修正】tag_list がリストだったり文字列だったりしてエラーの原因になるため削除します
-    // @JsonProperty("tag_list")
-    // private List<String> tagList;
-
     @JsonProperty("readable_publish_date")
     private String readablePublishDate;
     
@@ -70,10 +66,6 @@ public class DevItem {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
-    // tagListのGetter/Setterも削除
-    // public List<String> getTagList() { return tagList; }
-    // public void setTagList(List<String> tagList) { this.tagList = tagList; }
-    
     public String getReadablePublishDate() { return readablePublishDate; }
     public void setReadablePublishDate(String readablePublishDate) { this.readablePublishDate = readablePublishDate; }
     
