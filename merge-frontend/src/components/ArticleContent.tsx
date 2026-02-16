@@ -9,10 +9,18 @@ interface ArticleContentProps {
   className?: string;
 }
 
+interface TocItem {
+  id: string;
+  text: string;
+  level: number;
+}
+
 const ArticleContent = React.memo(function ArticleContent({ article, className }: ArticleContentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const [processedHtml, setProcessedHtml] = useState<string>('');
+  const [tocItems, setTocItems] = useState<TocItem[]>([]);
+  const [activeHeadingId, setActiveHeadingId] = useState<string>('');
 
   // HTMLを前処理してQiita埋め込みを変換
   useEffect(() => {
@@ -27,6 +35,35 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
           return `<blockquote class="twitter-tweet" data-lang="ja" data-dnt="true" data-theme="dark"><a href="${twitterUrl}" target="_blank" rel="noopener noreferrer">ツイートを表示</a></blockquote>`;
         }
       );
+
+      // 見出しにIDを付与して目次を生成
+      const toc: TocItem[] = [];
+      let headingCounter = 0;
+      
+      html = html.replace(
+        /<(h[1-6])([^>]*)>([\s\S]*?)<\/\1>/gi,
+        (match: string, tag: string, attributes: string, text: string) => {
+          headingCounter++;
+          // 既存のIDがあるか確認
+          const existingIdMatch = attributes.match(/id=["']([^"']*)["']/);
+          const id = existingIdMatch ? existingIdMatch[1] : `heading-${headingCounter}`;
+          const level = parseInt(tag.substring(1));
+          const plainText = text.replace(/<[^>]*>/g, '').trim();
+          
+          if (plainText) {
+            toc.push({ id, text: plainText, level });
+          }
+          
+          // 既存のID属性を削除して、新しいIDを付与
+          const cleanAttributes = attributes.replace(/id=["'][^"']*["']/g, '').trim();
+          const finalAttributes = cleanAttributes ? ` ${cleanAttributes}` : '';
+          
+          return `<${tag} id="${id}"${finalAttributes}>${text}</${tag}>`;
+        }
+      );
+      
+      console.log('TOC Items:', toc);
+      setTocItems(toc);
 
       // Qiitaのリンクカード埋め込みを独自カードに変換
       html = html.replace(
@@ -71,6 +108,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
       }
     } else {
       setProcessedHtml('');
+      setTocItems([]);
     }
   }, [article]);
 
@@ -230,6 +268,45 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
     if (progressRef.current) {
       progressRef.current.style.width = `${progress}%`;
     }
+
+    // 現在表示されている見出しを検出
+    if (tocItems.length > 0 && contentRef.current) {
+      const headings = tocItems.map(item => 
+        contentRef.current?.querySelector(`#${item.id}`)
+      ).filter(Boolean) as HTMLElement[];
+      
+      let currentId = '';
+      const offset = 100; // ヘッダーの高さなどを考慮したオフセット
+      
+      for (let i = headings.length - 1; i >= 0; i--) {
+        const heading = headings[i];
+        const rect = heading.getBoundingClientRect();
+        const containerRect = contentRef.current!.getBoundingClientRect();
+        
+        if (rect.top - containerRect.top <= offset) {
+          currentId = heading.id;
+          break;
+        }
+      }
+      
+      setActiveHeadingId(currentId);
+    }
+  };
+
+  const scrollToHeading = (id: string) => {
+    if (!contentRef.current) return;
+    
+    const heading = contentRef.current.querySelector(`#${id}`);
+    if (heading) {
+      const containerRect = contentRef.current.getBoundingClientRect();
+      const headingRect = heading.getBoundingClientRect();
+      const offset = headingRect.top - containerRect.top + contentRef.current.scrollTop - 80;
+      
+      contentRef.current.scrollTo({
+        top: offset,
+        behavior: 'smooth'
+      });
+    }
   };
 
   // 読了時間を計算（日本語400文字/分、英語200単語/分）- useMemoで最適化
@@ -245,7 +322,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
   const sourceBadge = getSourceLabel(source);
 
   return (
-    <div ref={contentRef} onScroll={handleScroll} className={`overflow-y-auto scroll-smooth flex justify-center relative ${className}`}>
+    <div ref={contentRef} onScroll={handleScroll} className={`overflow-y-auto scroll-smooth relative w-full h-full ${className || ''}`}>
       {/* スクロール進捗バー */}
       <div className="fixed top-0 left-0 right-0 h-1 bg-slate-800/50 z-50">
         <div
@@ -255,7 +332,10 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
         />
       </div>
 
-      <div className="w-full max-w-4xl px-6 lg:px-8 py-8">
+      <div className="flex min-h-full">
+        {/* メインコンテンツ */}
+        <div className="flex-1 flex justify-center">
+          <div className="w-full max-w-4xl px-6 lg:px-8 py-8">
         {article ? (
           <div className="w-full">
             {/* カバー画像とタイトルオーバーレイ */}
@@ -487,8 +567,51 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
             </div>
           </div>
         )}
+        </div>
       </div>
+
+      {/* 目次 (Table of Contents) */}
+      {article && tocItems.length > 0 && (
+        <div className="w-64 flex-shrink-0 pl-6 pr-6 py-8">
+          <div className="sticky top-8">
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-lg overflow-hidden">
+              <div className="p-4 border-b border-slate-800">
+                <h3 className="text-lg font-bold text-slate-300 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                  </svg>
+                  目次 ({tocItems.length})
+                </h3>
+              </div>
+              <nav className="p-3 space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto">
+                {tocItems.map((item, index) => {
+                  const isActive = item.id === activeHeadingId;
+                  const indent = (item.level - 1) * 12;
+                  
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => scrollToHeading(item.id)}
+                      className={`
+                        w-full text-left text-base py-1.5 px-2 rounded transition-all
+                        ${isActive 
+                          ? 'text-indigo-300 bg-indigo-900/30 border-l-2 border-indigo-400 font-semibold' 
+                          : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50 border-l-2 border-transparent'
+                        }
+                      `}
+                      style={{ paddingLeft: `${indent + 8}px` }}
+                    >
+                      <span className="line-clamp-2">{item.text}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  </div>
   );
 });
 
