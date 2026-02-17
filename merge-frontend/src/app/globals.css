@@ -1,13 +1,52 @@
 @import "tailwindcss";
 
+/* ========================================
+   CSS Custom Properties (Variables)
+   ======================================== */
 :root {
   color-scheme: dark;
+  
+  /* Color Palette */
+  --color-bg-primary: #0b1120;
+  --color-bg-secondary: #0f172a;
+  --color-bg-tertiary: #1e293b;
+  
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #e2e8f0;
+  --color-text-tertiary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  
+  --color-border: #334155;
+  --color-border-light: rgba(148, 163, 184, 0.2);
+  
+  --color-accent-primary: #818cf8;
+  --color-accent-secondary: #6366f1;
+  --color-accent-cyan: #67e8f9;
+  
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  
+  /* Focus Ring */
+  --focus-ring-color: rgba(129, 140, 248, 0.6);
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
 }
 
+/* ========================================
+   App Shell Styles
+   ======================================== */
 .app-shell {
   position: relative;
   isolation: isolate;
-  background-color: #0b1120;
+  background-color: var(--color-bg-primary);
   background-image:
     radial-gradient(1200px 700px at 10% 0%, rgba(14, 165, 233, 0.12), transparent 60%),
     radial-gradient(900px 600px at 90% 12%, rgba(245, 158, 11, 0.10), transparent 55%),
@@ -35,7 +74,7 @@
 
 .app-shell header {
   box-shadow: 0 10px 30px rgba(2, 6, 23, 0.35);
-  border-bottom-color: rgba(148, 163, 184, 0.2);
+  border-bottom-color: var(--color-border-light);
   background-color: rgba(11, 17, 32, 0.72);
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
@@ -60,6 +99,7 @@
   pointer-events: none;
 }
 
+/* Button Interactions */
 .app-shell button {
   transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
@@ -72,8 +112,18 @@
   transform: translateY(0);
 }
 
+.app-shell button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  transform: translateY(-1px);
+}
+
+/* ========================================
+   Article Content Container
+   ======================================== */
+
 .qiita-content {
-  color: #e2e8f0; 
+  color: var(--color-text-secondary); 
   line-height: 1.85;
   background: linear-gradient(140deg, rgba(15, 23, 42, 0.78), rgba(8, 12, 24, 0.7));
   backdrop-filter: blur(18px) saturate(135%);
@@ -82,28 +132,32 @@
   border-radius: 1rem;
   max-width: 960px;
   margin: 0 auto;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--color-border-light);
   box-shadow: 0 22px 60px rgba(2, 6, 23, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
+
+/* ========================================
+   Typography - Headings
+   ======================================== */
 
 .qiita-content h1 {
   font-size: 1.8rem;
   line-height: 2.4rem;
   font-weight: 700;
   margin-top: 2.5rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-sm);
   border-bottom: 2px solid rgba(129, 140, 248, 0.35);
-  color: #f1f5f9;
+  color: var(--color-text-primary);
 }
 
 .qiita-content h2 {
   font-size: 1.4rem;
   line-height: 2.1rem;
   font-weight: 700;
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-  padding-left: 1rem;
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
+  padding-left: var(--spacing-md);
   border-left: 4px solid rgba(129, 140, 248, 0.7);
   color: #e0e7ff;
 }
@@ -112,141 +166,12 @@
   font-size: 1.2rem;
   line-height: 1.9rem;
   font-weight: 700;
-  margin-top: 1.5rem;
+  margin-top: var(--spacing-lg);
   margin-bottom: 0.75rem;
   color: #e0e7ff;
 }
 
-.qiita-content a {
-  color: #a5f3fc;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: all 0.2s;
-}
-.qiita-content a:hover {
-  border-bottom-color: #a5f3fc;
-  color: #67e8f9;
-}
-
-.qiita-content ul {
-  list-style-type: disc;
-  list-style-position: inside;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-  padding-left: 0.5rem;
-}
-.qiita-content ul li + li {
-  margin-top: 0.25rem;
-}
-
-.qiita-content ol {
-  list-style-type: decimal;
-  list-style-position: inside;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-  padding-left: 0.5rem;
-}
-.qiita-content ol li + li {
-  margin-top: 0.25rem;
-}
-
-.qiita-content img {
-  border-radius: 0.5rem;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  max-width: 100%;
-  height: auto;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-}
-
-.qiita-content blockquote {
-  padding-left: 1rem;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-  font-style: italic;
-  border-left: 4px solid rgba(99, 102, 241, 0.7);
-  color: #cbd5e1;
-  background-color: rgba(30, 41, 59, 0.5);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.qiita-content .code-frame {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #334155;
-  background-color: #1e1e1e;
-}
-
-.qiita-content .code-frame::before {
-  content: attr(data-lang);
-  display: block;
-  padding: 0.375rem 1rem;
-  font-size: 0.75rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  text-transform: uppercase;
-  color: #94a3b8;
-  background-color: #2d2d2d;
-  border-bottom: 1px solid #334155;
-}
-
-.qiita-content pre {
-  padding: 1rem;
-  overflow-x: auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: #e2e8f0;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-  border: 1px solid #3c3c3c;
-  border-radius: 0.5rem;
-  margin: 1rem 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  position: relative;
-}
-
-.qiita-content pre::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
-}
-
-.qiita-content pre::-webkit-scrollbar-track {
-  background: #1e293b;
-  border-radius: 4px;
-}
-
-.qiita-content pre::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-
-.qiita-content pre::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}
-
-.qiita-content code {
-  padding: 0.25rem 0.5rem;
-  margin: 0 0.15rem;
-  border-radius: 0.25rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875em;
-  background-color: #1e293b;
-  color: #fca5a5;
-  border: 1px solid #334155;
-  word-break: break-word;
-}
-.qiita-content pre code {
-  background-color: transparent;
-  padding: 0;
-  margin: 0;
-  border: none;
-  color: inherit;
-}
+/* Typography - Text Elements */
 .qiita-content p {
   margin-top: 1.35rem;
   margin-bottom: 1.35rem;
@@ -254,195 +179,23 @@
   letter-spacing: 0.01em;
 }
 
-/* 画像の最大幅制限とセンタリング */
-.qiita-content img {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: 100%;
-  height: auto;
-  border-radius: 0.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-}
-
-/* Dev.toのコードブロック (pre タグ) */
-.qiita-content pre {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-  border: 1px solid #3c3c3c;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  overflow-x: auto;
-  color: #e2e8f0;
-}
-
-/* インラインコード */
-.qiita-content :not(pre) > code {
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.25rem;
-  background-color: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid #334155;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875em;
-}
-
-/* リストのスタイル強化 */
-.qiita-content ul, .qiita-content ol {
-  padding-left: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-/* リンクの色 */
-.qiita-content a {
-  color: #818cf8;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s;
-}
-.qiita-content a:hover {
-  border-bottom-color: #818cf8;
-}
-
-/* iframe (埋め込み動画など) */
-.qiita-content iframe {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  border-radius: 0.5rem;
-}
-
-/* ===== Dev.to用の強化スタイル ===== */
-
-/* 画像の強化 */
-.qiita-content img {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 1.5rem auto;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.qiita-content img:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-}
-
-/* テーブルのスタイリング */
-.qiita-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  border: 1px solid #334155;
-  background-color: rgba(15, 23, 42, 0.75);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.qiita-content table thead {
-  background-color: rgba(30, 41, 59, 0.85);
-  border-bottom: 2px solid #475569;
-}
-
-.qiita-content table th {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-weight: 700;
-  color: #f1f5f9;
-  border-right: 1px solid #334155;
-}
-
-.qiita-content table th:last-child {
-  border-right: none;
-}
-
-.qiita-content table td {
-  padding: 0.75rem 1rem;
-  border-right: 1px solid #334155;
-  border-bottom: 1px solid #334155;
-  color: #cbd5e1;
-}
-
-.qiita-content table td:last-child {
-  border-right: none;
-}
-
-.qiita-content table tbody tr:hover {
-  background-color: #0f172a;
-}
-
-/* ストロング・ボールド */
 .qiita-content strong,
 .qiita-content b {
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--color-text-primary);
 }
 
-/* イタリック */
 .qiita-content em,
 .qiita-content i {
   font-style: italic;
-  color: #e2e8f0;
+  color: var(--color-text-secondary);
 }
 
-/* 水平線 */
-.qiita-content hr {
-  border: none;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.4), transparent);
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-}
-
-/* ネストされたリスト */
-.qiita-content ul ul,
-.qiita-content ol ol,
-.qiita-content ul ol,
-.qiita-content ol ul {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-  padding-left: 2rem;
-}
-
-/* リスト項目 */
-.qiita-content li {
-  margin-bottom: 0.5rem;
-  color: #e2e8f0;
-}
-
-/* 定義リスト */
-.qiita-content dl {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
-.qiita-content dt {
-  font-weight: 700;
-  margin-top: 0.5rem;
-  color: #f1f5f9;
-}
-
-.qiita-content dd {
-  margin-left: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: #cbd5e1;
-}
-
-/* 小さいテキスト */
 .qiita-content small {
   font-size: 0.875em;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
-/* Mark (ハイライト) */
 .qiita-content mark {
   background-color: rgba(139, 92, 246, 0.3);
   padding: 0.1em 0.3em;
@@ -450,14 +203,12 @@
   color: #ddd6fe;
 }
 
-/* 削除テキスト */
 .qiita-content del,
 .qiita-content s {
   text-decoration: line-through;
   color: #64748b;
 }
 
-/* 上付き・下付き */
 .qiita-content sup,
 .qiita-content sub {
   font-size: 0.8em;
@@ -472,18 +223,417 @@
   bottom: -0.25em;
 }
 
-/* ボタンライク */
+/* ========================================
+   Links
+   ======================================== */
+
+.qiita-content a {
+  color: var(--color-accent-primary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+  border-radius: 0.125rem;
+}
+
+.qiita-content a:hover {
+  border-bottom-color: var(--color-accent-primary);
+  color: var(--color-accent-cyan);
+}
+
+.qiita-content a:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-bottom-color: var(--color-accent-primary);
+}
+
+/* ========================================
+   Lists
+   ======================================== */
+
+.qiita-content ul {
+  list-style-type: disc;
+  list-style-position: inside;
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-lg);
+}
+
+.qiita-content ol {
+  list-style-type: decimal;
+  list-style-position: inside;
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-lg);
+}
+
+.qiita-content li {
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-secondary);
+}
+
+.qiita-content ul li + li,
+.qiita-content ol li + li {
+  margin-top: var(--spacing-xs);
+}
+
+/* Nested Lists */
+.qiita-content ul ul,
+.qiita-content ol ol,
+.qiita-content ul ol,
+.qiita-content ol ul {
+  margin-top: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  padding-left: 2rem;
+}
+
+/* Definition Lists */
+.qiita-content dl {
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.qiita-content dt {
+  font-weight: 700;
+  margin-top: var(--spacing-sm);
+  color: var(--color-text-primary);
+}
+
+.qiita-content dd {
+  margin-left: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* ========================================
+   Images & Media
+   ======================================== */
+
+.qiita-content img {
+  display: block;
+  margin: var(--spacing-lg) auto;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.qiita-content img:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.qiita-content figcaption {
+  margin-top: var(--spacing-sm);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+.qiita-content iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+}
+
+/* ========================================
+   Blockquotes & Special Blocks
+   ======================================== */
+
+.qiita-content blockquote {
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  font-style: italic;
+  border-left: 4px solid rgba(99, 102, 241, 0.7);
+  color: var(--color-text-tertiary);
+  background-color: rgba(30, 41, 59, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.qiita-content hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.4), transparent);
+  margin: var(--spacing-xl) 0;
+}
+
+/* Callout / Alert Boxes */
+.qiita-content .callout,
+.qiita-content .alert {
+  padding: var(--spacing-md);
+  margin: var(--spacing-lg) 0;
+  border-left: 4px solid var(--color-accent-secondary);
+  border-radius: 0.375rem;
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.qiita-content .callout.warning,
+.qiita-content .alert.warning {
+  border-left-color: var(--color-warning);
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.qiita-content .callout.danger,
+.qiita-content .alert.danger {
+  border-left-color: var(--color-danger);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.qiita-content .callout.success,
+.qiita-content .alert.success {
+  border-left-color: var(--color-success);
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+/* ========================================
+   Code Blocks & Syntax Highlighting
+   ======================================== */
+
+.qiita-content .code-frame {
+  margin: var(--spacing-lg) 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--color-border);
+  background-color: #1e1e1e;
+}
+
+.qiita-content .code-frame::before {
+  content: attr(data-lang);
+  display: block;
+  padding: 0.375rem var(--spacing-md);
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background-color: #2d2d2d;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.qiita-content pre {
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+  border: 1px solid #3c3c3c;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+/* Scrollbar Styles for Code Blocks */
+.qiita-content pre::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.qiita-content pre::-webkit-scrollbar-track {
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+}
+
+.qiita-content pre::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.qiita-content pre::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Inline Code (not inside pre blocks) */
+.qiita-content :not(pre) > code {
+  padding: 0.25rem 0.5rem;
+  margin: 0 0.15rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  background-color: rgba(30, 41, 59, 0.8);
+  color: #fbbf24;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  word-break: break-word;
+}
+
+.qiita-content pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+/* Syntax Highlighting - Highlight.js */
+.qiita-content .hljs {
+  background-color: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow-x: visible !important;
+  margin: 0 !important;
+}
+
+/* キーワード (import, from, function, const, return など) */
+.qiita-content .hljs-keyword {
+  color: #c586c0 !important;
+  font-weight: 600;
+}
+
+/* 文字列 */
+.qiita-content .hljs-string {
+  color: #ce9178 !important;
+}
+
+/* 数値 */
+.qiita-content .hljs-number {
+  color: #b5cea8 !important;
+}
+
+/* リテラル (true, false, null など) */
+.qiita-content .hljs-literal {
+  color: #569cd6 !important;
+}
+
+/* 属性 */
+.qiita-content .hljs-attr,
+.qiita-content .hljs-attribute {
+  color: #9cdcfe !important;
+}
+
+/* 関数名、クラス名 */
+.qiita-content .hljs-title,
+.qiita-content .hljs-title.function_,
+.qiita-content .hljs-title.class_ {
+  color: #dcdcaa !important;
+}
+
+/* コメント */
+.qiita-content .hljs-comment {
+  color: #6a9955 !important;
+  font-style: italic;
+}
+
+/* 組み込み関数 */
+.qiita-content .hljs-built_in {
+  color: #4ec9b0 !important;
+}
+
+/* 型 */
+.qiita-content .hljs-type {
+  color: #4ec9b0 !important;
+}
+
+/* 変数、パラメータ */
+.qiita-content .hljs-variable,
+.qiita-content .hljs-params {
+  color: #9cdcfe !important;
+}
+
+/* HTMLタグ、タグ名 */
+.qiita-content .hljs-tag,
+.qiita-content .hljs-name {
+  color: #569cd6 !important;
+}
+
+/* メタ情報 */
+.qiita-content .hljs-meta {
+  color: #9cdcfe !important;
+}
+
+/* 演算子 */
+.qiita-content .hljs-operator {
+  color: #d4d4d4 !important;
+}
+
+/* 句読点 */
+.qiita-content .hljs-punctuation {
+  color: #d4d4d4 !important;
+}
+
+/* セレクタ (CSS) */
+.qiita-content .hljs-selector-tag,
+.qiita-content .hljs-selector-class,
+.qiita-content .hljs-selector-id {
+  color: #d7ba7d !important;
+}
+
+/* プロパティ (CSS) */
+.qiita-content .hljs-property {
+  color: #9cdcfe !important;
+}
+
+/* ========================================
+   Tables
+   ======================================== */
+
+.qiita-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--spacing-lg) 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background-color: rgba(15, 23, 42, 0.75);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.qiita-content table thead {
+  background-color: rgba(30, 41, 59, 0.85);
+  border-bottom: 2px solid #475569;
+}
+
+.qiita-content table th {
+  padding: 0.75rem var(--spacing-md);
+  text-align: left;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  border-right: 1px solid var(--color-border);
+}
+
+.qiita-content table th:last-child {
+  border-right: none;
+}
+
+.qiita-content table td {
+  padding: 0.75rem var(--spacing-md);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+}
+
+.qiita-content table td:last-child {
+  border-right: none;
+}
+
+.qiita-content table tbody tr:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+/* ========================================
+   Forms & Interactive Elements
+   ======================================== */
+   
+/* Buttons */
 .qiita-content button,
 .qiita-content input[type="button"],
 .qiita-content input[type="submit"] {
-  padding: 0.5rem 1rem;
+  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: 0.375rem;
   background-color: #4f46e5;
   color: white;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .qiita-content button:hover,
@@ -492,59 +642,118 @@
   background-color: #4338ca;
 }
 
-/* フォーム要素 */
+.qiita-content button:focus-visible,
+.qiita-content input[type="button"]:focus-visible,
+.qiita-content input[type="submit"]:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  background-color: #4338ca;
+}
+
+.qiita-content button:active,
+.qiita-content input[type="button"]:active,
+.qiita-content input[type="submit"]:active {
+  transform: translateY(1px);
+}
+
+/* Form Inputs */
 .qiita-content input[type="text"],
 .qiita-content input[type="email"],
 .qiita-content input[type="search"],
+.qiita-content input[type="password"],
+.qiita-content input[type="number"],
+.qiita-content input[type="url"],
 .qiita-content textarea,
 .qiita-content select {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #334155;
+  padding: var(--spacing-sm) 0.75rem;
+  border: 1px solid var(--color-border);
   border-radius: 0.375rem;
-  background-color: #1e293b;
-  color: #e2e8f0;
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
   font-family: inherit;
   font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.qiita-content input[type="text"]:hover,
+.qiita-content input[type="email"]:hover,
+.qiita-content input[type="search"]:hover,
+.qiita-content input[type="password"]:hover,
+.qiita-content input[type="number"]:hover,
+.qiita-content input[type="url"]:hover,
+.qiita-content textarea:hover,
+.qiita-content select:hover {
+  border-color: #475569;
 }
 
 .qiita-content input[type="text"]:focus,
 .qiita-content input[type="email"]:focus,
 .qiita-content input[type="search"]:focus,
+.qiita-content input[type="password"]:focus,
+.qiita-content input[type="number"]:focus,
+.qiita-content input[type="url"]:focus,
 .qiita-content textarea:focus,
 .qiita-content select:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--color-accent-secondary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-/* 詳細・概要 */
+.qiita-content input[type="text"]:focus-visible,
+.qiita-content input[type="email"]:focus-visible,
+.qiita-content input[type="search"]:focus-visible,
+.qiita-content input[type="password"]:focus-visible,
+.qiita-content input[type="number"]:focus-visible,
+.qiita-content input[type="url"]:focus-visible,
+.qiita-content textarea:focus-visible,
+.qiita-content select:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: -1px;
+  border-color: var(--color-accent-primary);
+}
+
+/* Details & Summary */
 .qiita-content details {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-  border: 1px solid #334155;
+  margin: var(--spacing-md) 0;
+  border: 1px solid var(--color-border);
   border-radius: 0.375rem;
-  padding: 1rem;
+  padding: var(--spacing-md);
   background-color: rgba(30, 41, 59, 0.5);
 }
 
 .qiita-content summary {
   font-weight: 700;
   cursor: pointer;
-  color: #f1f5f9;
-  padding: 0.5rem 0;
+  color: var(--color-text-primary);
+  padding: var(--spacing-sm) 0;
+  user-select: none;
+  border-radius: 0.25rem;
+  transition: color 0.2s ease;
+}
+
+.qiita-content summary:hover {
+  color: var(--color-accent-primary);
+}
+
+.qiita-content summary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .qiita-content details[open] summary {
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 1rem;
+  margin-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--spacing-md);
 }
 
-/* バッジ・タグ風 */
+/* ========================================
+   Badges & Utilities
+   ======================================== */
+
 .qiita-content .badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  margin: 0.25rem;
+  padding: var(--spacing-xs) 0.75rem;
+  margin: var(--spacing-xs);
   border-radius: 9999px;
   background-color: #4f46e5;
   color: white;
@@ -552,93 +761,56 @@
   font-weight: 600;
 }
 
-/* キャプション */
-.qiita-content figcaption {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: #94a3b8;
-  text-align: center;
-  font-style: italic;
+/* ========================================
+   Accessibility & Focus States
+   ======================================== */
+
+/* Scrollbar Hide - Chrome, Safari, Edge */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-/* コード行のハイライト (Prismなど) */
-.qiita-content .hljs {
-  background-color: transparent !important;
-  color: #e2e8f0 !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  overflow-x: visible !important;
-  margin: 0 !important;
+/* Scrollbar Hide - Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Prism.jsのシンタックスハイライト */
-.qiita-content .hljs-string {
-  color: #ce9178;
+/* Remove focus outline for mouse users (but keep for keyboard) */
+.qiita-content a:focus:not(:focus-visible),
+.qiita-content button:focus:not(:focus-visible),
+.qiita-content summary:focus:not(:focus-visible),
+.app-shell button:focus:not(:focus-visible),
+.app-shell a:focus:not(:focus-visible) {
+  outline: none;
 }
 
-.qiita-content .hljs-number {
-  color: #b5cea8;
+/* Scoped keyboard navigation visibility for app shell */
+.app-shell a:focus-visible,
+.app-shell button:focus-visible,
+.app-shell input:focus-visible,
+.app-shell select:focus-visible,
+.app-shell textarea:focus-visible,
+.app-shell [role="button"]:focus-visible,
+.app-shell [role="link"]:focus-visible,
+.app-shell [tabindex="0"]:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
-.qiita-content .hljs-literal {
-  color: #569cd6;
+/* Skip links for accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--color-accent-primary);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 100;
+  border-radius: 0 0 0.375rem 0;
 }
 
-.qiita-content .hljs-attr,
-.qiita-content .hljs-attribute {
-  color: #9cdcfe;
-}
-
-.qiita-content .hljs-keyword {
-  color: #d4a574;
-  font-weight: 600;
-}
-
-.qiita-content .hljs-title {
-  color: #4ec9b0;
-}
-
-.qiita-content .hljs-comment {
-  color: #6a9955;
-  font-style: italic;
-}
-
-.qiita-content .hljs-built_in {
-  color: #ce9178;
-}
-
-.qiita-content .hljs-type {
-  color: #4ec9b0;
-}
-
-.qiita-content .hljs-variable {
-  color: #9cdcfe;
-}
-
-/* 警告・情報ボックス */
-.qiita-content .callout,
-.qiita-content .alert {
-  padding: 1rem;
-  margin: 1.5rem 0;
-  border-left: 4px solid #6366f1;
-  border-radius: 0.375rem;
-  background-color: rgba(99, 102, 241, 0.1);
-}
-
-.qiita-content .callout.warning,
-.qiita-content .alert.warning {
-  border-left-color: #f59e0b;
-  background-color: rgba(245, 158, 11, 0.1);
-}
-
-.qiita-content .callout.danger,
-.qiita-content .alert.danger {
-  border-left-color: #ef4444;
-  background-color: rgba(239, 68, 68, 0.1);
-}
-
-.qiita-content .callout.success,
-.qiita-content .alert.success {
-  border-left-color: #10b981;
-  background-color: rgba(16, 185, 129, 0.1);
+.skip-link:focus {
+  top: 0;
 }

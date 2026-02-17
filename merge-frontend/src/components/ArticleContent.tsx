@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import hljs from 'highlight.js';
 import { getArticleSource, getBadgeClasses, getSourceLabel } from "../lib/articleHelpers";
 
+hljs.configure({ ignoreUnescapedHTML: true });
+
 interface ArticleContentProps {
   article: any;
   className?: string;
@@ -18,6 +20,10 @@ interface TocItem {
 const ArticleContent = React.memo(function ArticleContent({ article, className }: ArticleContentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  const tocNavRef = useRef<HTMLElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
+  const headingElementsRef = useRef<HTMLElement[]>([]);
+  const activeHeadingIdRef = useRef<string>('');
   const [processedHtml, setProcessedHtml] = useState<string>('');
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
@@ -26,6 +32,12 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
   useEffect(() => {
     if (article && (article.rendered_body || article.body_html)) {
       let html = article.rendered_body || article.body_html;
+
+      const decodeHtmlEntities = (value: string) => {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = value;
+        return textarea.value;
+      };
 
       // QiitaのTwitter埋め込みiframeをblockquoteに変換
       html = html.replace(
@@ -94,10 +106,48 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
       );
 
       // YouTubeサムネイル画像を高解像度版に置き換え
-      // サムネイル品質：maxresdefault (1280x720) -> sddefault (640x480) -> hqdefault (480x360) -> mqdefault (320x180)
+      // サムネイル品質：maxresdefault (1280x720) -> sddefault (640x480) -> hqdefault (480x360)
       html = html.replace(
         /src="https:\/\/(?:img|i)\.youtube\.com\/vi\/([^/]+)\/(?:default|mqdefault|sddefault|hqdefault|maxresdefault)\.(?:jpg|webp)"/gi,
-        'src="https://i.ytimg.com/vi/$1/maxresdefault.jpg" onerror="this.onerror=null;const id=\'$1\';const sizes=[\'sddefault\',\'hqdefault\',\'mqdefault\'];let idx=0;const tryNext=()=>{if(idx<sizes.length){this.src=`https://i.ytimg.com/vi/${id}/${sizes[idx]}.jpg`;idx++;}};this.onerror=tryNext;"'
+        'src="https://i.ytimg.com/vi/$1/maxresdefault.jpg" loading="lazy" decoding="async" onerror="this.onerror=null;const id=\'$1\';const sizes=[\'sddefault\',\'hqdefault\'];let idx=0;const tryNext=()=>{if(idx<sizes.length){this.src=`https://i.ytimg.com/vi/${id}/${sizes[idx]}.jpg`;idx++;}};this.onerror=tryNext;"'
+      );
+
+      html = html.replace(
+        /<pre([^>]*)>\s*<code([^>]*)>([\s\S]*?)<\/code>\s*<\/pre>/gi,
+        (_match: string, preAttrs: string, codeAttrs: string, codeContent: string) => {
+          const classMatch = codeAttrs.match(/class=["']([^"']*)["']/i);
+          const originalClasses = classMatch ? classMatch[1] : '';
+          const languageClass = originalClasses
+            .split(/\s+/)
+            .find((className) => className.startsWith('language-') || className.startsWith('lang-'));
+
+          const normalizedLanguage = languageClass
+            ? languageClass.replace(/^language-/, '').replace(/^lang-/, '').toLowerCase()
+            : undefined;
+
+          const decodedCode = decodeHtmlEntities(codeContent);
+
+          try {
+            const highlighted = normalizedLanguage && hljs.getLanguage(normalizedLanguage)
+              ? hljs.highlight(decodedCode, { language: normalizedLanguage, ignoreIllegals: true })
+              : hljs.highlightAuto(decodedCode);
+
+            const finalClasses = originalClasses
+              .split(/\s+/)
+              .filter(Boolean)
+              .filter((className) => className !== 'hljs')
+              .concat(['hljs']);
+
+            const detectedLanguage = highlighted.language ? ` language-${highlighted.language}` : '';
+            return `<pre${preAttrs}><code class="${finalClasses.join(' ')}${detectedLanguage}">${highlighted.value}</code></pre>`;
+          } catch {
+            const safeCode = decodedCode
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+            return `<pre${preAttrs}><code class="${originalClasses}">${safeCode}</code></pre>`;
+          }
+        }
       );
 
       setProcessedHtml(html);
@@ -111,6 +161,17 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
       setTocItems([]);
     }
   }, [article]);
+
+  useEffect(() => {
+    if (!contentRef.current || tocItems.length === 0) {
+      headingElementsRef.current = [];
+      return;
+    }
+
+    headingElementsRef.current = tocItems
+      .map((item) => contentRef.current?.querySelector(`#${item.id}`))
+      .filter(Boolean) as HTMLElement[];
+  }, [processedHtml, tocItems]);
 
   // Twitter埋め込みスクリプトの読み込みと再レンダリング
   useEffect(() => {
@@ -244,54 +305,53 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
     });
   }, [processedHtml]);
 
-  // コードハイライトの適用（requestAnimationFrameで最適化）
-  useEffect(() => {
-    if (processedHtml && contentRef.current) {
-      requestAnimationFrame(() => {
-        const codeBlocks = contentRef.current?.querySelectorAll('pre code') || [];
-        codeBlocks.forEach((block: any) => {
-          if (!block.classList.contains('hljs')) {
-            hljs.highlightElement(block);
-          }
-        });
-      });
-    }
-  }, [processedHtml]);
-
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
-    const scrollTop = element.scrollTop;
-    const scrollHeight = element.scrollHeight - element.clientHeight;
-    const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
 
-    // Ref経由で直接DOMを更新、state更新による再レンダリングを避ける
-    if (progressRef.current) {
-      progressRef.current.style.width = `${progress}%`;
+    if (scrollRafRef.current !== null) {
+      cancelAnimationFrame(scrollRafRef.current);
     }
 
-    // 現在表示されている見出しを検出
-    if (tocItems.length > 0 && contentRef.current) {
-      const headings = tocItems.map(item => 
-        contentRef.current?.querySelector(`#${item.id}`)
-      ).filter(Boolean) as HTMLElement[];
-      
-      let currentId = '';
-      const offset = 100; // ヘッダーの高さなどを考慮したオフセット
-      
-      for (let i = headings.length - 1; i >= 0; i--) {
-        const heading = headings[i];
-        const rect = heading.getBoundingClientRect();
-        const containerRect = contentRef.current!.getBoundingClientRect();
-        
-        if (rect.top - containerRect.top <= offset) {
-          currentId = heading.id;
-          break;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      const scrollTop = element.scrollTop;
+      const scrollHeight = element.scrollHeight - element.clientHeight;
+      const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+
+      if (progressRef.current) {
+        progressRef.current.style.width = `${progress}%`;
+      }
+
+      if (tocItems.length > 0 && contentRef.current) {
+        const headings = headingElementsRef.current;
+
+        let currentId = '';
+        const offset = 100;
+        const containerRect = contentRef.current.getBoundingClientRect();
+
+        for (let i = headings.length - 1; i >= 0; i--) {
+          const heading = headings[i];
+          const rect = heading.getBoundingClientRect();
+          if (rect.top - containerRect.top <= offset) {
+            currentId = heading.id;
+            break;
+          }
+        }
+
+        if (currentId !== activeHeadingIdRef.current) {
+          activeHeadingIdRef.current = currentId;
+          setActiveHeadingId(currentId);
         }
       }
-      
-      setActiveHeadingId(currentId);
-    }
+    });
   };
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
 
   const scrollToHeading = (id: string) => {
     if (!contentRef.current) return;
@@ -318,8 +378,115 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
     return Math.ceil((japaneseChars / 400) + (englishWords / 200));
   }, [processedHtml]);
 
+  // 目次を見出しにスムーズスクロール
+  useEffect(() => {
+    if (!activeHeadingId || !tocNavRef.current) return;
+
+    const activeButton = tocNavRef.current.querySelector(`button[data-heading-id="${activeHeadingId}"]`);
+    if (activeButton) {
+      activeButton.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
+  }, [activeHeadingId]);
+
   const source = article ? getArticleSource(article) : 'database';
   const sourceBadge = getSourceLabel(source);
+
+  const renderedArticleContent = useMemo(() => {
+    if (!processedHtml) {
+      return (
+        <div className="p-6 bg-gradient-to-r from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-xl">
+          <div className="flex items-start gap-3">
+            <svg className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <p className="text-sm text-slate-300 font-semibold mb-2">本文データがありません</p>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Qiita/Dev.toの検索結果から記事を選択すると、本文プレビューが表示されます。<br />
+                データベースに保存済みの記事は、URLのみが保存されています。
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <article
+        dangerouslySetInnerHTML={{ __html: processedHtml }}
+        className="qiita-content w-full max-w-none
+          [&_*]:m-0 [&_*]:p-0
+
+          /* 段落 */
+          [&_p]:text-slate-300 [&_p]:text-base [&_p]:leading-[1.8] [&_p]:mb-5 [&_p]:tracking-wide
+
+          /* 見出し */
+          [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-slate-100 [&_h1]:mt-12 [&_h1]:mb-5 [&_h1]:pb-3 [&_h1]:border-b-2 [&_h1]:border-indigo-500/30
+          [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-slate-100 [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:pb-2 [&_h2]:border-b [&_h2]:border-slate-700
+          [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-100 [&_h3]:mt-8 [&_h3]:mb-3
+          [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-slate-200 [&_h4]:mt-6 [&_h4]:mb-2
+          [&_h5]:text-base [&_h5]:font-semibold [&_h5]:text-slate-300 [&_h5]:mt-5 [&_h5]:mb-2
+          [&_h6]:text-sm [&_h6]:font-semibold [&_h6]:text-slate-400 [&_h6]:mt-4 [&_h6]:mb-2
+
+          /* テキスト装飾 */
+          [&_strong]:text-slate-100 [&_strong]:font-bold
+          [&_em]:text-slate-300 [&_em]:italic
+          [&_del]:text-slate-500 [&_del]:line-through
+
+          /* コードブロック */
+          [&_pre]:bg-gradient-to-br [&_pre]:from-slate-900 [&_pre]:to-slate-800 [&_pre]:p-5 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:my-6 [&_pre]:border [&_pre]:border-slate-700/50 [&_pre]:shadow-xl
+
+          /* 引用（通常の引用・Twitter埋め込みを含む） */
+          [&_blockquote]:text-slate-300 [&_blockquote]:bg-slate-900/30 [&_blockquote]:border-l-4 [&_blockquote]:border-indigo-500 [&_blockquote]:pl-5 [&_blockquote]:pr-4 [&_blockquote]:py-3 [&_blockquote]:my-6 [&_blockquote]:rounded-r [&_blockquote]:min-h-[50px]
+          [&_blockquote_p]:mb-2 [&_blockquote_p]:last:mb-0
+          [&_blockquote_a]:text-indigo-300
+
+          /* Twitter埋め込み専用スタイル */
+          [&_.twitter-tweet]:bg-transparent [&_.twitter-tweet]:border-0 [&_.twitter-tweet]:p-0 [&_.twitter-tweet]:min-h-[200px]
+          [&_.twitter-tweet_p]:not-italic [&_.twitter-tweet_p]:text-slate-300
+
+          /* リンク */
+          [&_a]:text-indigo-400 [&_a:hover]:text-indigo-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-indigo-500/50 [&_a:hover]:decoration-indigo-400 [&_a]:transition-colors
+
+          /* 画像 */
+          [&_img]:rounded-lg [&_img]:shadow-2xl [&_img]:my-6 [&_img]:max-w-full [&_img]:border [&_img]:border-slate-700/50
+
+          /* リスト */
+          [&_li]:text-slate-300 [&_li]:ml-6 [&_li]:mb-2 [&_li]:leading-[1.8] [&_li]:pl-2
+          [&_ul]:my-4 [&_ul]:space-y-1
+          [&_ol]:my-4 [&_ol]:space-y-1
+          [&_ul_li]:list-disc
+          [&_ol_li]:list-decimal
+          [&_ul_ul]:mt-2 [&_ul_ul]:mb-1
+          [&_ol_ol]:mt-2 [&_ol_ol]:mb-1
+
+          /* テーブル */
+          [&_table]:border-collapse [&_table]:border [&_table]:border-slate-700 [&_table]:my-6 [&_table]:w-full [&_table]:rounded-lg [&_table]:overflow-hidden [&_table]:shadow-lg
+          [&_thead]:bg-gradient-to-r [&_thead]:from-slate-800 [&_thead]:to-slate-700
+          [&_th]:border [&_th]:border-slate-700 [&_th]:text-slate-100 [&_th]:font-semibold [&_th]:p-3 [&_th]:text-left
+          [&_td]:border [&_td]:border-slate-700 [&_td]:p-3 [&_td]:text-slate-300
+          [&_tbody_tr:hover]:bg-slate-800/50 [&_tbody_tr]:transition-colors
+
+          /* 水平線 */
+          [&_hr]:border-0 [&_hr]:h-px [&_hr]:bg-gradient-to-r [&_hr]:from-transparent [&_hr]:via-slate-700 [&_hr]:to-transparent [&_hr]:my-8
+
+          /* メディア・埋め込みコンテンツ */
+          [&_iframe]:w-full [&_iframe]:rounded-lg [&_iframe]:my-6 [&_iframe]:max-w-full [&_iframe]:border [&_iframe]:border-slate-700/50 [&_iframe]:shadow-lg [&_iframe]:min-h-[400px]
+          [&_video]:w-full [&_video]:rounded-lg [&_video]:my-6 [&_video]:max-w-full [&_video]:border [&_video]:border-slate-700/50 [&_video]:shadow-lg
+
+          /* 埋め込みカード・スクリプト埋め込み */
+          [&_div.embed-card]:my-6 [&_div.embed-card]:border [&_div.embed-card]:border-slate-700 [&_div.embed-card]:rounded-lg [&_div.embed-card]:overflow-hidden
+          [&_.custom-link-card]:my-6 [&_.custom-link-card]:block
+          [&_.speakerdeck-embed]:my-6
+          [&_.codepen]:my-6
+          [&_.instagram-media]:my-6 [&_.instagram-media]:mx-auto
+        "
+      />
+    );
+  }, [processedHtml]);
 
   return (
     <div ref={contentRef} onScroll={handleScroll} className={`overflow-y-auto scroll-smooth relative w-full h-full ${className || ''}`}>
@@ -451,97 +618,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
             </a>
 
             {/* 本文 */}
-            {processedHtml ? (
-              <article
-                dangerouslySetInnerHTML={{ __html: processedHtml }}
-                className="qiita-content w-full prose prose-invert prose-lg max-w-none
-                  [&_*]:m-0 [&_*]:p-0
-
-                  /* 段落 */
-                  [&_p]:text-slate-300 [&_p]:text-base [&_p]:leading-[1.8] [&_p]:mb-5 [&_p]:tracking-wide
-
-                  /* 見出し */
-                  [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-slate-100 [&_h1]:mt-12 [&_h1]:mb-5 [&_h1]:pb-3 [&_h1]:border-b-2 [&_h1]:border-indigo-500/30
-                  [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-slate-100 [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:pb-2 [&_h2]:border-b [&_h2]:border-slate-700
-                  [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-100 [&_h3]:mt-8 [&_h3]:mb-3
-                  [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-slate-200 [&_h4]:mt-6 [&_h4]:mb-2
-                  [&_h5]:text-base [&_h5]:font-semibold [&_h5]:text-slate-300 [&_h5]:mt-5 [&_h5]:mb-2
-                  [&_h6]:text-sm [&_h6]:font-semibold [&_h6]:text-slate-400 [&_h6]:mt-4 [&_h6]:mb-2
-
-                  /* テキスト装飾 */
-                  [&_strong]:text-slate-100 [&_strong]:font-bold
-                  [&_em]:text-slate-300 [&_em]:italic
-                  [&_del]:text-slate-500 [&_del]:line-through
-
-                  /* インラインコード */
-                  [&_code]:text-amber-300 [&_code]:bg-slate-800/80 [&_code]:px-2 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_code]:border [&_code]:border-slate-700/50
-
-                  /* コードブロック */
-                  [&_pre]:bg-gradient-to-br [&_pre]:from-slate-900 [&_pre]:to-slate-800 [&_pre]:text-slate-300 [&_pre]:p-5 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:my-6 [&_pre]:border [&_pre]:border-slate-700/50 [&_pre]:shadow-xl
-                  [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:border-0 [&_pre_code]:text-sm
-
-                  /* 引用（通常の引用・Twitter埋め込みを含む） */
-                  [&_blockquote]:text-slate-300 [&_blockquote]:bg-slate-900/30 [&_blockquote]:border-l-4 [&_blockquote]:border-indigo-500 [&_blockquote]:pl-5 [&_blockquote]:pr-4 [&_blockquote]:py-3 [&_blockquote]:my-6 [&_blockquote]:rounded-r [&_blockquote]:min-h-[50px]
-                  [&_blockquote_p]:mb-2 [&_blockquote_p]:last:mb-0
-                  [&_blockquote_a]:text-indigo-300
-
-                  /* Twitter埋め込み専用スタイル */
-                  [&_.twitter-tweet]:bg-transparent [&_.twitter-tweet]:border-0 [&_.twitter-tweet]:p-0 [&_.twitter-tweet]:min-h-[200px]
-                  [&_.twitter-tweet_p]:not-italic [&_.twitter-tweet_p]:text-slate-300
-
-                  /* リンク */
-                  [&_a]:text-indigo-400 [&_a:hover]:text-indigo-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-indigo-500/50 [&_a:hover]:decoration-indigo-400 [&_a]:transition-colors
-
-                  /* 画像 */
-                  [&_img]:rounded-lg [&_img]:shadow-2xl [&_img]:my-6 [&_img]:max-w-full [&_img]:border [&_img]:border-slate-700/50
-
-                  /* リスト */
-                  [&_li]:text-slate-300 [&_li]:ml-6 [&_li]:mb-2 [&_li]:leading-[1.8] [&_li]:pl-2
-                  [&_ul]:my-4 [&_ul]:space-y-1
-                  [&_ol]:my-4 [&_ol]:space-y-1
-                  [&_ul_li]:list-disc
-                  [&_ol_li]:list-decimal
-                  [&_ul_ul]:mt-2 [&_ul_ul]:mb-1
-                  [&_ol_ol]:mt-2 [&_ol_ol]:mb-1
-
-                  /* テーブル */
-                  [&_table]:border-collapse [&_table]:border [&_table]:border-slate-700 [&_table]:my-6 [&_table]:w-full [&_table]:rounded-lg [&_table]:overflow-hidden [&_table]:shadow-lg
-                  [&_thead]:bg-gradient-to-r [&_thead]:from-slate-800 [&_thead]:to-slate-700
-                  [&_th]:border [&_th]:border-slate-700 [&_th]:text-slate-100 [&_th]:font-semibold [&_th]:p-3 [&_th]:text-left
-                  [&_td]:border [&_td]:border-slate-700 [&_td]:p-3 [&_td]:text-slate-300
-                  [&_tbody_tr:hover]:bg-slate-800/50 [&_tbody_tr]:transition-colors
-
-                  /* 水平線 */
-                  [&_hr]:border-0 [&_hr]:h-px [&_hr]:bg-gradient-to-r [&_hr]:from-transparent [&_hr]:via-slate-700 [&_hr]:to-transparent [&_hr]:my-8
-
-                  /* メディア・埋め込みコンテンツ */
-                  [&_iframe]:w-full [&_iframe]:rounded-lg [&_iframe]:my-6 [&_iframe]:max-w-full [&_iframe]:border [&_iframe]:border-slate-700/50 [&_iframe]:shadow-lg [&_iframe]:min-h-[400px]
-                  [&_video]:w-full [&_video]:rounded-lg [&_video]:my-6 [&_video]:max-w-full [&_video]:border [&_video]:border-slate-700/50 [&_video]:shadow-lg
-
-                  /* 埋め込みカード・スクリプト埋め込み */
-                  [&_div.embed-card]:my-6 [&_div.embed-card]:border [&_div.embed-card]:border-slate-700 [&_div.embed-card]:rounded-lg [&_div.embed-card]:overflow-hidden
-                  [&_.custom-link-card]:my-6 [&_.custom-link-card]:block
-                  [&_.speakerdeck-embed]:my-6
-                  [&_.codepen]:my-6
-                  [&_.instagram-media]:my-6 [&_.instagram-media]:mx-auto
-                "
-              />
-            ) : (
-              <div className="p-6 bg-gradient-to-r from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-xl">
-                <div className="flex items-start gap-3">
-                  <svg className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <div>
-                    <p className="text-sm text-slate-300 font-semibold mb-2">本文データがありません</p>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Qiita/Dev.toの検索結果から記事を選択すると、本文プレビューが表示されます。<br />
-                      データベースに保存済みの記事は、URLのみが保存されています。
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {renderedArticleContent}
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -583,7 +660,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
                   目次 ({tocItems.length})
                 </h3>
               </div>
-              <nav className="p-3 space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto">
+              <nav ref={tocNavRef} className="p-3 space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-hide">
                 {tocItems.map((item, index) => {
                   const isActive = item.id === activeHeadingId;
                   const indent = (item.level - 1) * 12;
@@ -591,6 +668,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
                   return (
                     <button
                       key={index}
+                      data-heading-id={item.id}
                       onClick={() => scrollToHeading(item.id)}
                       className={`
                         w-full text-left text-base py-1.5 px-2 rounded transition-all

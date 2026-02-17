@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from "react";
-import hljs from 'highlight.js';
-import 'highlight.js/styles/nord.css';
 import ArticleView from "../components/ArticleView";
 import MemoEditor from "../components/MemoEditor";
 import ArticleContent from "../components/ArticleContent";
@@ -191,17 +189,11 @@ export default function Home() {
 
   useEffect(() => {
     if (selectedArticle && (selectedArticle.rendered_body || selectedArticle.body_html)) {
-      // スクロール位置をトップにリセット
       if (contentRef.current) {
         contentRef.current.scrollTop = 0;
       }
-      setTimeout(() => {
-        document.querySelectorAll('pre code').forEach((block: any) => {
-          hljs.highlightElement(block);
-        });
-      }, 0);
     }
-  }, [activeTabId]);
+  }, [activeTabId, selectedArticle]);
 
   // 履歴をlocalStorageから読み込み
   useEffect(() => {
