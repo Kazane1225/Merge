@@ -128,6 +128,7 @@ public class DevServiceImpl implements DevService {
 
     private Integer convertPeriodToDays(String period) {
         return switch (period) {
+            case "1day" -> 1;
             case "week" -> 7;
             case "month" -> 30;
             case "year" -> 365;

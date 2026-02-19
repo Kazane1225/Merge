@@ -10,7 +10,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
   const [articles, setArticles] = useState<any[]>([]);
   const [keyword, setKeyword] = useState('');
   const [sort, setSort] = useState<'rel' | 'count' | 'created'>('rel');
-  const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
+  const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month'>('all');
   const [loading, setLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -236,6 +236,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
               <option value="all">全期間</option>
               <option value="month">1ヶ月以内</option>
               <option value="week">1週間以内</option>
+              <option value="1day">1日以内</option>
             </select>
             <button
               onClick={() => fetchArticles()}

@@ -123,25 +123,27 @@ public class QiitaServiceImpl implements QiitaService {
     @Override
     public List<QiitaItem> getHotArticles(String period) {
         LocalDate sinceDate;
-
+        String rawQuery;
         // 期間の計算
-        if ("week".equals(period)) {
+        if ("1day".equals(period)) {
+            sinceDate = LocalDate.now().minusDays(1);
+            rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=3";
+        } else if ("week".equals(period)) {
             sinceDate = LocalDate.now().minusWeeks(1);
+            rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=10";
         } else if ("month".equals(period)) {
             sinceDate = LocalDate.now().minusMonths(1);
+            rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=25";
         } else {
             sinceDate = LocalDate.now().minusYears(1);
+            rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=40";
         }
 
-        // クエリ構築
-        // stocks:>=20 で足切りをして、少なくとも20ストック以上ある記事をAPIから「新着順」で取得します
-        String rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=20";
 
         try {
             String encodedQuery = URLEncoder.encode(rawQuery, StandardCharsets.UTF_8)
                                             .replace("+", "%20");
 
-            // APIリクエスト (API仕様上、ここではまだ新着順で返ってきます)
             String urlStr = QIITA_API_URL + "?page=1&per_page=100&query=" + encodedQuery;
             List<QiitaItem> items = fetchFromQiita(URI.create(urlStr));
 
