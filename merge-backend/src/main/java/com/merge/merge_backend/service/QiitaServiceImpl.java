@@ -133,10 +133,10 @@ public class QiitaServiceImpl implements QiitaService {
             rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=10";
         } else if ("month".equals(period)) {
             sinceDate = LocalDate.now().minusMonths(1);
-            rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=25";
+            rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=45";
         } else {
             sinceDate = LocalDate.now().minusYears(1);
-            rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=40";
+            rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=350";
         }
 
 
