@@ -31,6 +31,10 @@ public class Article extends BaseEntity {
     @OneToMany(mappedBy = "article", cascade = CascadeType.ALL)
     private List<Memo> memos;
 
+    @JsonManagedReference
+    @OneToMany(mappedBy = "article", cascade = CascadeType.ALL)
+    private List<CommentQiita> comments;
+
     @Column(columnDefinition = "TEXT") 
     @JsonProperty("rendered_body")
     private String renderedBody;

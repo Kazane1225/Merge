@@ -1,5 +1,6 @@
 package com.merge.merge_backend.controller;
 
+import com.merge.merge_backend.dto.QiitaCommentItem;
 import com.merge.merge_backend.dto.QiitaItem;
 import com.merge.merge_backend.service.QiitaService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,5 +37,10 @@ public class QiitaController {
     @GetMapping("/article/{id}")
     public QiitaItem getArticleDetail(@PathVariable String id) {
         return qiitaService.getArticleDetail(id);
+    }
+
+    @GetMapping("/article/{id}/comments")
+    public List<QiitaCommentItem> getArticleComments(@PathVariable String id) {
+        return qiitaService.getArticleComments(id);
     }
 }

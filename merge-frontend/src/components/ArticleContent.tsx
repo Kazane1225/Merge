@@ -27,6 +27,8 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
   const [processedHtml, setProcessedHtml] = useState<string>('');
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
 
   // HTMLを前処理してQiita埋め込みを変換
   useEffect(() => {
@@ -160,6 +162,25 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
       setProcessedHtml('');
       setTocItems([]);
     }
+  }, [article]);
+
+  // Qiitaコメントを記事選択後すぐに非同期取得
+  useEffect(() => {
+    const isQiita = article?.url?.includes('qiita.com') && article?.id;
+    if (!isQiita) {
+      setComments([]);
+      setCommentsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setComments([]);
+    setCommentsLoading(true);
+    fetch(`http://localhost:8080/api/qiita/article/${article.id}/comments`)
+      .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+      .then(data => { if (!cancelled) setComments(Array.isArray(data) ? data : []); })
+      .catch(() => { if (!cancelled) setComments([]); })
+      .finally(() => { if (!cancelled) setCommentsLoading(false); });
+    return () => { cancelled = true; };
   }, [article]);
 
   useEffect(() => {
@@ -619,6 +640,95 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
 
             {/* 本文 */}
             {renderedArticleContent}
+
+            {/* Qiitaコメントセクション */}
+            {source === 'qiita' && article.id && (
+              <div className="mt-12 border-t border-slate-700/50 pt-8">
+                <h2 className="text-base font-bold text-slate-300 mb-5 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                  コメント
+                  {!commentsLoading && comments.length > 0 && (
+                    <span className="text-xs text-slate-500 font-normal ml-1">({comments.length})</span>
+                  )}
+                </h2>
+
+                {commentsLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2].map(i => (
+                      <div key={i} className="p-4 bg-slate-800/40 border border-slate-700/40 rounded-lg animate-pulse">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 bg-slate-700 rounded-full flex-shrink-0" />
+                          <div className="h-3 bg-slate-700 rounded w-24" />
+                          <div className="h-3 bg-slate-700 rounded w-16 ml-auto" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-3 bg-slate-700 rounded w-full" />
+                          <div className="h-3 bg-slate-700 rounded w-4/5" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : comments.length === 0 ? (
+                  <p className="text-sm text-slate-500 py-2">コメントはありません</p>
+                ) : (
+                  <div className="space-y-4">
+                    {comments.map((comment: any) => {
+                      const user = comment.user as any;
+                      const initial = (user?.id ?? '?')[0].toUpperCase();
+                      return (
+                        <div
+                          key={comment.id}
+                          className="p-4 bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/40 hover:border-slate-600/50 rounded-lg transition-all"
+                        >
+                          {/* ヘッダー: アバター・名前・日付 */}
+                          <div className="flex items-center gap-3 mb-3">
+                            {user?.profile_image_url ? (
+                              <img
+                                src={user.profile_image_url}
+                                alt={user.id}
+                                className="w-8 h-8 rounded-full border border-slate-600/50 flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-indigo-900/50 border border-indigo-700/40 flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs text-indigo-300 font-bold">{initial}</span>
+                              </div>
+                            )}
+                            <span className="text-sm font-semibold text-slate-300">{user?.id ?? '不明'}</span>
+                            {comment.created_at && (
+                              <span className="text-xs text-slate-500 ml-auto flex-shrink-0">
+                                {new Date(comment.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* コメント本文 */}
+                          {comment.rendered_body ? (
+                            <div
+                              dangerouslySetInnerHTML={{ __html: comment.rendered_body }}
+                              className="text-sm text-slate-300 leading-relaxed
+                                [&_p]:mb-3 [&_p]:last:mb-0
+                                [&_code]:bg-slate-900 [&_code]:text-indigo-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:border [&_code]:border-slate-700/50
+                                [&_pre]:bg-slate-900 [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:my-3 [&_pre]:border [&_pre]:border-slate-700/50 [&_pre]:text-xs
+                                [&_a]:text-indigo-400 [&_a:hover]:text-indigo-300 [&_a]:underline [&_a]:underline-offset-2
+                                [&_ul]:my-2 [&_ul_li]:list-disc [&_li]:ml-4 [&_li]:mb-1
+                                [&_ol]:my-2 [&_ol_li]:list-decimal
+                                [&_blockquote]:border-l-4 [&_blockquote]:border-indigo-500/40 [&_blockquote]:pl-3 [&_blockquote]:text-slate-400 [&_blockquote]:my-2 [&_blockquote]:italic
+                                [&_strong]:text-slate-100 [&_strong]:font-bold
+                                [&_img]:rounded [&_img]:max-w-full [&_img]:my-2
+                              "
+                            />
+                          ) : (
+                            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{comment.body}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">

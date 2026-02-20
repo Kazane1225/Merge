@@ -1,5 +1,6 @@
 package com.merge.merge_backend.service;
 
+import com.merge.merge_backend.dto.QiitaCommentItem;
 import com.merge.merge_backend.dto.QiitaItem;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -139,7 +140,6 @@ public class QiitaServiceImpl implements QiitaService {
             rawQuery = "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=350";
         }
 
-
         try {
             String encodedQuery = URLEncoder.encode(rawQuery, StandardCharsets.UTF_8)
                                             .replace("+", "%20");
@@ -228,6 +228,30 @@ public class QiitaServiceImpl implements QiitaService {
         } catch (Exception e) {
             logger.severe("Error fetching article detail: " + e.getMessage());
             return new QiitaItem();
+        }
+    }
+
+    @Override
+    public List<QiitaCommentItem> getArticleComments(String itemId) {
+        String url = QIITA_API_URL + "/" + itemId + "/comments";
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            if (qiitaAccessToken != null && !qiitaAccessToken.isEmpty()) {
+                headers.set("Authorization", "Bearer " + qiitaAccessToken);
+            }
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<QiitaCommentItem[]> response = restTemplate.exchange(
+                url, 
+                HttpMethod.GET, 
+                entity, 
+                QiitaCommentItem[].class
+            );
+            QiitaCommentItem[] comments = response.getBody();
+            return Arrays.asList(comments != null ? comments : new QiitaCommentItem[0]);
+        } catch (Exception e) {
+            logger.severe("Error fetching article comments: " + e.getMessage());
+            return Collections.emptyList();
         }
     }
 }

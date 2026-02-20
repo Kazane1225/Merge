@@ -1,5 +1,7 @@
 package com.merge.merge_backend.dto;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -18,6 +20,9 @@ public class QiitaItem {
     @JsonProperty("stocks_count")
     private int stocksCount;
 
+    @JsonProperty("qiita-comments")
+    private List<QiitaCommentItem> qiitaComments;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -35,4 +40,7 @@ public class QiitaItem {
 
     public int getStocksCount() { return stocksCount; }
     public void setStocksCount(int stocksCount) { this.stocksCount = stocksCount; }
+
+    public List<QiitaCommentItem> getQiitaComments() { return qiitaComments; }
+    public void setQiitaComments(List<QiitaCommentItem> qiitaComments) { this.qiitaComments = qiitaComments; }
 }
