@@ -6,8 +6,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Data
 public class DevItem {
 
     // IDは数値から文字列への自動変換を有効化
@@ -48,45 +50,4 @@ public class DevItem {
 
     @JsonProperty("dev_comments")
     private List<DevCommentItem> devComments;
-
-    // --- Getters and Setters ---
-
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-
-    public String getUrl() { return url; }
-    public void setUrl(String url) { this.url = url; }
-
-    public String getRenderedBody() { return renderedBody; }
-    public void setRenderedBody(String renderedBody) { this.renderedBody = renderedBody; }
-
-    public Integer getLikesCount() { return likesCount; }
-    public void setLikesCount(Integer likesCount) { this.likesCount = likesCount; }
-
-    public Integer getCommentsCount() { return commentsCount; }
-    public void setCommentsCount(Integer commentsCount) { this.commentsCount = commentsCount; }
-
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-
-    public String getReadablePublishDate() { return readablePublishDate; }
-    public void setReadablePublishDate(String readablePublishDate) { this.readablePublishDate = readablePublishDate; }
-    
-    public String getPublishedAt() { return publishedAt; }
-    public void setPublishedAt(String publishedAt) { this.publishedAt = publishedAt; }
-    
-    public Object getUser() { return user; }
-    public void setUser(Object user) { this.user = user; }
-    
-    public String getSlug() { return slug; }
-    public void setSlug(String slug) { this.slug = slug; }
-    
-    public String getCoverImage() { return coverImage; }
-    public void setCoverImage(String coverImage) { this.coverImage = coverImage; }
-
-    public List<DevCommentItem> getDevComments() { return devComments; }
-    public void setDevComments(List<DevCommentItem> devComments) { this.devComments = devComments; }
 }
