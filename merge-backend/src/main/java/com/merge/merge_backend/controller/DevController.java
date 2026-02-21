@@ -1,5 +1,6 @@
 package com.merge.merge_backend.controller;
 
+import com.merge.merge_backend.dto.DevCommentItem;
 import com.merge.merge_backend.dto.DevItem;
 import com.merge.merge_backend.service.DevService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,5 +37,10 @@ public class DevController {
     @GetMapping("/article/{id}")
     public DevItem getArticleDetail(@PathVariable String id) {
         return devService.getArticleDetail(id);
+    }
+
+    @GetMapping("/article/{id}/comments")
+    public List<DevCommentItem> getArticleComments(@PathVariable String id) {
+        return devService.getArticleComments(id);
     }
 }

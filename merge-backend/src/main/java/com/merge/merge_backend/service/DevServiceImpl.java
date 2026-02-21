@@ -1,5 +1,6 @@
 package com.merge.merge_backend.service;
 
+import com.merge.merge_backend.dto.DevCommentItem;
 import com.merge.merge_backend.dto.DevItem;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +24,7 @@ public class DevServiceImpl implements DevService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private static final String BASE_URL = "https://dev.to/api/articles";
+    private static final String BASE_COMMENT_URL = "https://dev.to/api/comments";
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
     @Value("${dev.access.token:}")
@@ -134,5 +136,21 @@ public class DevServiceImpl implements DevService {
             case "year" -> 365;
             default -> null;
         };
+    }
+
+    @Override
+    public List<DevCommentItem> getArticleComments(String itemId) {
+        try {
+            String url = BASE_COMMENT_URL + "?a_id=" + itemId;
+            HttpEntity<String> entity = createEntity();
+
+            ResponseEntity<DevCommentItem[]> response = restTemplate.exchange(url, HttpMethod.GET, entity, DevCommentItem[].class);
+            DevCommentItem[] items = response.getBody();
+            return Arrays.asList(items != null ? items : new DevCommentItem[0]);
+        } catch (HttpStatusCodeException e) {
+            return Collections.emptyList();
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 }

@@ -2,6 +2,9 @@ package com.merge.merge_backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -43,6 +46,9 @@ public class DevItem {
     @JsonProperty("cover_image")
     private String coverImage;
 
+    @JsonProperty("dev_comments")
+    private List<DevCommentItem> devComments;
+
     // --- Getters and Setters ---
 
     public String getId() { return id; }
@@ -80,4 +86,7 @@ public class DevItem {
     
     public String getCoverImage() { return coverImage; }
     public void setCoverImage(String coverImage) { this.coverImage = coverImage; }
+
+    public List<DevCommentItem> getDevComments() { return devComments; }
+    public void setDevComments(List<DevCommentItem> devComments) { this.devComments = devComments; }
 }
