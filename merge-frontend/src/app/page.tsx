@@ -97,6 +97,9 @@ export default function Home() {
         lastViewed: Date.now()
       };
 
+      // 履歴に追加
+      addToHistory(finalArticle, newTab.id);
+
       if (tabs.length >= MAX_TABS) {
         // タブ上限に達している場合、最も古いタブを削除
         const oldestTab = tabs.reduce((oldest, current) => 
@@ -108,6 +111,9 @@ export default function Home() {
       }
       setActiveTabId(articleId);
     }
+
+    // ビューモードを通常表示に切り替え
+    setViewMode('normal');
   };
 
   const handleCloseTab = (tabId: string, e?: React.MouseEvent) => {
@@ -144,9 +150,6 @@ export default function Home() {
         ? { ...t, lastViewed: Date.now() }
         : t
     ));
-    
-    // 履歴に追加
-    addToHistory(tab.article, tabId);
   };
   
   const addToHistory = (article: any, tabId: string) => {
