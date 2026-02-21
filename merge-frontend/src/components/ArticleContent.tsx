@@ -810,19 +810,21 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
                       const renderComment = (c: any, depth: number = 0) => {
                         const user = c.user as any;
                         const initial = (user?.id_code ?? '?')[0].toUpperCase();
+                        const isReply = depth >= 1;
+                        const isNestedReply = depth >= 2;
                         return (
                           <div key={c.id_code ?? `dev-comment-${idx}-${depth}`}>
-                            <div className={`group flex gap-4 py-5 ${ depth === 0 ? 'border-b border-slate-800/60 last:border-0' : ''}`}>
+                            <div className={`group flex gap-4 py-4 ${depth === 0 ? 'border-b border-slate-800/60 last:border-0' : ''}`}>
                               {/* アバター */}
                               <div className="flex-shrink-0">
                                 {user?.profile_image ? (
                                   <img
                                     src={user.profile_image}
                                     alt={user.id_code}
-                                    className="w-9 h-9 rounded-full border-2 border-slate-700/60 group-hover:border-indigo-600/50 transition-colors"
+                                    className={`rounded-full border-2 border-slate-700/60 group-hover:border-indigo-600/50 transition-colors ${isReply ? 'w-7 h-7' : 'w-9 h-9'}`}
                                   />
                                 ) : (
-                                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-800/60 to-purple-800/60 border-2 border-slate-700/60 group-hover:border-indigo-600/50 transition-colors flex items-center justify-center">
+                                  <div className={`rounded-full bg-gradient-to-br from-indigo-800/60 to-purple-800/60 border-2 border-slate-700/60 group-hover:border-indigo-600/50 transition-colors flex items-center justify-center ${isReply ? 'w-7 h-7' : 'w-9 h-9'}`}>
                                     <span className="text-xs text-indigo-200 font-bold">{initial}</span>
                                   </div>
                                 )}
@@ -845,10 +847,10 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
                                   <p className="text-sm text-slate-300 leading-[1.75] whitespace-pre-wrap">{c.body}</p>
                                 )}
 
-                                {/* 子コメント */}
+                                {/* 子コメント: depth>=2はそれ以上インデントしない */}
                                 {c.children && c.children.length > 0 && (
-                                  <div className="mt-4 pl-4 border-l-2 border-slate-700/50 space-y-1">
-                                    {c.children.map((child: any) => renderComment(child, depth + 1))}
+                                  <div className="mt-3 pl-1 border-l border-slate-700/40 space-y-0">
+                                    {c.children.map((child: any) => renderComment(child, isNestedReply ? depth : depth + 1))}
                                   </div>
                                 )}
                               </div>
