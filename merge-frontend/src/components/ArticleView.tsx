@@ -215,6 +215,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
                 className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
               >
                 <option value="all">全期間</option>
+              <option value="year">1年以内</option>
                 <option value="month">1ヶ月以内</option>
                 <option value="week">1週間以内</option>
               </select>
@@ -234,6 +235,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
               className="w-full bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
             >
               <option value="all">全期間</option>
+              <option value="year">1年以内</option>
               <option value="month">1ヶ月以内</option>
               <option value="week">1週間以内</option>
               <option value="1day">1日以内</option>
