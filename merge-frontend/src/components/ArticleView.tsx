@@ -118,9 +118,22 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
     resetState();
   };
 
+  const showSearch = (activeMain === 'qiita' || activeMain === 'dev' || activeMain === 'database') && activeSub === 'search';
+  const showTrendingFilter = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'trending';
+  const showSimpleGo = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'timeline';
+
   useEffect(() => {
     resetState();
   }, [activeMain, activeSub]);
+
+  // 検索モード時、sort や period が変更されたら自動で再検索
+  useEffect(() => {
+    if (showSearch && keyword && !loading) {
+      // 短い遅延を入れて state の更新を完了させる
+      const timer = setTimeout(() => fetchArticles(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [sort, period, showSearch]);
 
   // cleanup: コンポーネント アンマウント時に pending requests をキャンセル
   useEffect(() => {
@@ -130,10 +143,6 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       }
     };
   }, []);
-
-  const showSearch = (activeMain === 'qiita' || activeMain === 'dev' || activeMain === 'database') && activeSub === 'search';
-  const showTrendingFilter = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'trending';
-  const showSimpleGo = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'timeline';
 
   return (
     <div className="w-full h-full bg-[#0F172A] flex flex-col">
@@ -215,9 +224,10 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
                 className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
               >
                 <option value="all">全期間</option>
-              <option value="year">1年以内</option>
+                <option value="year">1年以内</option>
                 <option value="month">1ヶ月以内</option>
                 <option value="week">1週間以内</option>
+                <option value="1day">1日以内</option>
               </select>
             </div>
           </div>

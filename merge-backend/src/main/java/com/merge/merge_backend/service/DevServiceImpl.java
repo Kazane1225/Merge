@@ -84,14 +84,33 @@ public class DevServiceImpl implements DevService {
     // ── 公開API ──────────────────────────────────────────────────
     @Override
     public List<DevItem> searchArticles(String keyword, String sort, String period) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
-                .queryParam("per_page", 300);
-        if (keyword != null && !keyword.isEmpty()) builder.queryParam("tag", keyword);
-        if (period != null && !period.equals("all")) {
-            Integer days = convertPeriodToDays(period);
+        return switch (sort) {
+            // 反応順: 複数ページ取得してメモリ内ソート
+            case "count" -> fetchSearchPages(keyword, period, 5).stream()
+                    .sorted(Comparator.comparingInt(this::getReactions).reversed())
+                    .toList();
+            // 新着順・関連度順: 1ページ取得 (フロント側でもソート)
+            default -> fetchSearchPages(keyword, period, 1);
+        };
+    }
+
+    /** キーワード・期間・ページ数を指定して Dev.to API から記事を取得する（id重複を除去） */
+    private List<DevItem> fetchSearchPages(String keyword, String period, int pages) {
+        Integer days = convertPeriodToDays(period);
+        Map<String, DevItem> seen = new LinkedHashMap<>();
+        for (int page = 1; page <= pages; page++) {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
+                    .queryParam("per_page", 100)
+                    .queryParam("page", page);
+            if (keyword != null && !keyword.isBlank()) builder.queryParam("tag", keyword);
             if (days != null) builder.queryParam("top", days);
+            List<DevItem> items = fetchFromDev(builder.build().toUri());
+            if (items.isEmpty()) break;
+            for (DevItem item : items) {
+                if (item.getId() != null) seen.putIfAbsent(item.getId(), item);
+            }
         }
-        return fetchFromDev(builder.build().toUri());
+        return new ArrayList<>(seen.values());
     }
 
     @Override

@@ -85,53 +85,59 @@ public class QiitaServiceImpl implements QiitaService {
     // ── 公開API ──────────────────────────────────────────────────
     @Override
     public List<QiitaItem> searchArticles(String keyword, String sort, String period) {
-        StringBuilder baseQueryBuilder = new StringBuilder();
+        String query = buildSearchQuery(keyword, period);
+        // count は多めに取得してメモリ内ソート、他は1〜2ページ
+        int pages = switch (sort) {
+            case "count"   -> 3;
+            case "created" -> 2;
+            default        -> 1;
+        };
+        // 取得後、Java 側で確実に期間フィルタをかける
+        List<QiitaItem> results = filterByPeriod(fetchMultiplePages(query, pages), period);
+        return switch (sort) {
+            case "count" -> results.stream()
+                    .sorted(Comparator.comparingInt(QiitaItem::getLikesCount).reversed())
+                    .toList();
+            default -> results;
+        };
+    }
 
-        if (keyword != null && !keyword.isEmpty()) {
-            baseQueryBuilder.append(keyword);
-        }
+    /** キーワードと期間を組み合わせた Qiita 検索クエリを構築する (API 側の pre-filter 用) */
+    private String buildSearchQuery(String keyword, String period) {
+        List<String> parts = new ArrayList<>();
+        if (keyword != null && !keyword.isBlank()) parts.add(keyword);
+        LocalDate sinceDate = sinceDate(period);
+        if (sinceDate != null)
+            parts.add("created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
+        return String.join(" ", parts);
+    }
 
-        if (!"all".equals(period)) {
-            LocalDate sinceDate = LocalDate.now();
-            if ("week".equals(period)) {
-                sinceDate = sinceDate.minusWeeks(1);
-            } else if ("month".equals(period)) {
-                sinceDate = sinceDate.minusMonths(1);
-            }
-            if (baseQueryBuilder.length() > 0) baseQueryBuilder.append(" ");
-            baseQueryBuilder.append("created:>=").append(sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE));
-        }
+    /** Java 側で created_at を見て期間外の記事を除外する */
+    private List<QiitaItem> filterByPeriod(List<QiitaItem> items, String period) {
+        LocalDate since = sinceDate(period);
+        if (since == null) return items;
+        return items.stream()
+                .filter(a -> {
+                    if (a.getCreatedAt() == null || a.getCreatedAt().length() < 10) return false;
+                    try {
+                        LocalDate created = LocalDate.parse(a.getCreatedAt().substring(0, 10));
+                        return !created.isBefore(since);
+                    } catch (Exception e) {
+                        return true;
+                    }
+                })
+                .toList();
+    }
 
-        String baseQuery = baseQueryBuilder.toString();
-        List<QiitaItem> items;
-
-        if ("count".equals(sort)) {
-            int firstThreshold = "all".equals(period) ? 100 : 20;
-            String queryHigh = (baseQuery + " stocks:>=" + firstThreshold).trim();
-            items = fetchItemsWithQuery(queryHigh);
-
-            if (items.size() < 50) {
-                int secondThreshold = "all".equals(period) ? 20 : 5;
-                String queryMid = (baseQuery + " stocks:>=" + secondThreshold).trim();
-                List<QiitaItem> retryItems = fetchItemsWithQuery(queryMid);
-
-                if (retryItems.size() < 10) {
-                    items = fetchItemsWithQuery((baseQuery + " stocks:>=0").trim());
-                } else {
-                    items = retryItems;
-                }
-            }
-
-            List<QiitaItem> sortedItems = new ArrayList<>(items);
-            sortedItems.sort((a, b) -> {
-                int countA = a.getLikesCount();
-                int countB = b.getLikesCount();
-                return Integer.compare(countB, countA);
-            });
-            return sortedItems;
-        }
-
-        return fetchItemsWithQuery(baseQuery);
+    /** period 文字列を「以降」の LocalDate に変換する。"all" は null を返す */
+    private LocalDate sinceDate(String period) {
+        return switch (period != null ? period : "all") {
+            case "1day"  -> LocalDate.now().minusDays(1);
+            case "week"  -> LocalDate.now().minusWeeks(1);
+            case "month" -> LocalDate.now().minusMonths(1);
+            case "year"  -> LocalDate.now().minusYears(1);
+            default      -> null;
+        };
     }
 
     @Override
@@ -196,15 +202,23 @@ public class QiitaServiceImpl implements QiitaService {
         return "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=" + minStocks;
     }
 
-    private List<QiitaItem> fetchItemsWithQuery(String rawQuery) {
+    /** 指定クエリで最大 pages ページ取得して結合する（id重複を除去） */
+    private List<QiitaItem> fetchMultiplePages(String query, int pages) {
+        Map<String, QiitaItem> seen = new LinkedHashMap<>();
         try {
-            String encodedQuery = URLEncoder.encode(rawQuery, StandardCharsets.UTF_8).replace("+", "%20");
-            String urlStr = QIITA_API_URL + "?page=1&per_page=100&query=" + encodedQuery;
-            return fetchFromQiita(URI.create(urlStr));
+            String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8).replace("+", "%20");
+            for (int page = 1; page <= pages; page++) {
+                String url = QIITA_API_URL + "?page=" + page + "&per_page=100&query=" + encoded;
+                List<QiitaItem> items = fetchFromQiita(URI.create(url));
+                if (items.isEmpty()) break;
+                for (QiitaItem item : items) {
+                    if (item.getId() != null) seen.putIfAbsent(item.getId(), item);
+                }
+            }
         } catch (Exception e) {
-            log.error("[Qiita] fetchItemsWithQuery error: {}", e.getMessage());
-            return Collections.emptyList();
+            log.error("[Qiita] fetchMultiplePages error: {}", e.getMessage());
         }
+        return new ArrayList<>(seen.values());
     }
 
     private List<QiitaItem> fetchFromQiita(URI uri) {

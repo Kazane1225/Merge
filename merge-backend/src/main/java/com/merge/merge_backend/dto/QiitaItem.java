@@ -22,6 +22,9 @@ public class QiitaItem {
     @JsonProperty("stocks_count")
     private int stocksCount;
 
+    @JsonProperty("created_at")
+    private String createdAt;
+
     @JsonProperty("qiita-comments")
     private List<QiitaCommentItem> qiitaComments;
 }
