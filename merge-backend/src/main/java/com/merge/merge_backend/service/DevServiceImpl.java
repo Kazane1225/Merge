@@ -26,13 +26,17 @@ public class DevServiceImpl implements DevService {
 
     private static final Logger log = LoggerFactory.getLogger(DevServiceImpl.class);
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private static final String BASE_URL = "https://dev.to/api/articles";
     private static final String BASE_COMMENT_URL = "https://dev.to/api/comments";
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
     @Value("${dev.access.token:}")
     private String devApiKey;
+
+    public DevServiceImpl(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     // ── キャッシュ設定 ────────────────────────────────────────────
     private static class CacheEntry {

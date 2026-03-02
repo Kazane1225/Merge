@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -29,8 +30,14 @@ public class QiitaServiceImpl implements QiitaService {
 
     private static final Logger log = LoggerFactory.getLogger(QiitaServiceImpl.class);
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+    private final Clock clock;
     private final String QIITA_API_URL = "https://qiita.com/api/v2/items";
+
+    public QiitaServiceImpl(RestTemplate restTemplate, Clock clock) {
+        this.restTemplate = restTemplate;
+        this.clock = clock;
+    }
 
     @Value("${qiita.access.token:}")
     private String qiitaAccessToken;
@@ -132,10 +139,10 @@ public class QiitaServiceImpl implements QiitaService {
     /** period 文字列を「以降」の LocalDate に変換する。"all" は null を返す */
     private LocalDate sinceDate(String period) {
         return switch (period != null ? period : "all") {
-            case "1day"  -> LocalDate.now().minusDays(1);
-            case "week"  -> LocalDate.now().minusWeeks(1);
-            case "month" -> LocalDate.now().minusMonths(1);
-            case "year"  -> LocalDate.now().minusYears(1);
+            case "1day"  -> LocalDate.now(clock).minusDays(1);
+            case "week"  -> LocalDate.now(clock).minusWeeks(1);
+            case "month" -> LocalDate.now(clock).minusMonths(1);
+            case "year"  -> LocalDate.now(clock).minusYears(1);
             default      -> null;
         };
     }
@@ -193,11 +200,11 @@ public class QiitaServiceImpl implements QiitaService {
 
     private String buildHotQuery(String period, int minStocks) {
         LocalDate sinceDate = switch (period) {
-            case "1day"  -> LocalDate.now().minusDays(1);
-            case "week"  -> LocalDate.now().minusWeeks(1);
-            case "month" -> LocalDate.now().minusMonths(1);
-            case "year"  -> LocalDate.now().minusYears(1);
-            default      -> LocalDate.now().minusYears(10); // all
+            case "1day"  -> LocalDate.now(clock).minusDays(1);
+            case "week"  -> LocalDate.now(clock).minusWeeks(1);
+            case "month" -> LocalDate.now(clock).minusMonths(1);
+            case "year"  -> LocalDate.now(clock).minusYears(1);
+            default      -> LocalDate.now(clock).minusYears(10); // all
         };
         return "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=" + minStocks;
     }
