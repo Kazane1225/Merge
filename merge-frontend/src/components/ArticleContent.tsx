@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import hljs from 'highlight.js';
 import { getArticleSource, getBadgeClasses, getSourceLabel } from "../lib/articleHelpers";
+import { API_BASE } from '../lib/api';
 
 hljs.configure({ ignoreUnescapedHTML: true });
 
@@ -197,15 +198,15 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
     setComments([]);
     setCommentsLoading(true);
     const apiUrl = isQiita
-      ? `http://localhost:8080/api/qiita/article/${article.id}/comments`
-      : `http://localhost:8080/api/dev/article/${article.id}/comments`;
+      ? `${API_BASE}/qiita/article/${article.id}/comments`
+      : `${API_BASE}/dev/article/${article.id}/comments`;
     fetch(apiUrl)
       .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
       .then(data => { if (!cancelled) setComments(Array.isArray(data) ? data : []); })
       .catch(() => { if (!cancelled) setComments([]); })
       .finally(() => { if (!cancelled) setCommentsLoading(false); });
     return () => { cancelled = true; };
-  }, [article]);
+  }, [article?.url, article?.id]);
 
   useEffect(() => {
     if (!contentRef.current || tocItems.length === 0) {
@@ -829,7 +830,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
 
                       const renderComment = (c: any, depth: number = 0) => {
                         const user = c.user as any;
-                        const initial = (user?.id_code ?? user?.name ?? '?')[0].toUpperCase();
+                        const initial = (user?.id_code || user?.name || '?')[0].toUpperCase();
                         const isReply = depth >= 1;
                         const isNestedReply = depth >= 2;
                         return (

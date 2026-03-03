@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getArticleSource } from "../lib/articleHelpers";
 import { ArticleTab, HistoryEntry } from "../types/article";
+import { API_BASE } from '../lib/api';
 
 interface GraphViewProps {
   tabs: ArticleTab[];
@@ -30,7 +31,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
     const fetchDbArticles = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8080/api/articles');
+        const response = await fetch(`${API_BASE}/articles`);
         if (response.ok) {
           const articles = await response.json();
           setDbArticles(articles);

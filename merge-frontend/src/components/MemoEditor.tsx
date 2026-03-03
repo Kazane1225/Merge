@@ -5,8 +5,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { API_BASE } from '../lib/api';
 
-export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
+export default function MemoEditor({
+  targetArticle,
+  onArticleSaved,
+}: {
+  targetArticle: any;
+  onArticleSaved?: (savedArticle: any) => void;
+}) {
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
@@ -16,26 +23,22 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
-    // No-op effect to trigger when targetArticle changes
-  }, [targetArticle]);
-
-  useEffect(() => {
     if (!targetArticle) {
       setContent('');
       return;
     }
-    
+
     // DBの記事（数値ID）
     if (typeof targetArticle.id === 'number') {
-      fetch(`http://localhost:8080/api/article/${targetArticle.id}`)
+      fetch(`${API_BASE}/article/${targetArticle.id}`)
         .then((res) => res.ok ? res.json() : [])
         .then((data) => setContent(data && data.length > 0 ? data[0].content : ''))
         .catch(() => {});
-    } 
+    }
     // QiitaまたはDev.toの記事（URL）
     else if (targetArticle.url) {
       const safeUrl = encodeURIComponent(targetArticle.url);
-      fetch(`http://localhost:8080/api/memos/search?url=${safeUrl}`)
+      fetch(`${API_BASE}/memos/search?url=${safeUrl}`)
         .then((res) => res.ok ? res.json() : [])
         .then((data) => setContent(data && data.length > 0 ? data[0].content : ''))
         .catch(() => {});
@@ -60,14 +63,20 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
     }
   }, [showArticleBody, targetArticle?.rendered_body, targetArticle?.body_html]);
 
-  // 記事またはメモ内容が変わったらisSavedをリセット
+  // 記事が切り替わったらisSavedをリセット
+  const articleKey = targetArticle?.url ?? String(targetArticle?.id ?? '');
   useEffect(() => {
     setIsSaved(false);
-  }, [targetArticle?.url ?? targetArticle?.id, content]);
+  }, [articleKey]);
+
+  // メモ内容が変わったらisSavedをリセット
+  useEffect(() => {
+    setIsSaved(false);
+  }, [content]);
 
   const handleSave = async () => {
     if (!targetArticle) {
-      alert("記事が選択されていません");
+      alert('記事が選択されていません');
       return;
     }
 
@@ -84,18 +93,20 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
 
       if (isQiita && isExternal) {
         try {
-          const res = await fetch(`http://localhost:8080/api/qiita/article/${targetArticle.id}/comments`);
+          const res = await fetch(`${API_BASE}/qiita/article/${targetArticle.id}/comments`);
           if (res.ok) comments = await res.json();
-        } catch { /* コメント取得失敗は無視 */ }
+          else console.warn('[MemoEditor] Qiitaコメント取得失敗:', res.status);
+        } catch (e) { console.warn('[MemoEditor] Qiitaコメント取得エラー:', e); }
       } else if (isQiita && !isExternal && Array.isArray(targetArticle.comments)) {
         comments = targetArticle.comments;
       }
 
       if (isDev && isExternal) {
         try {
-          const res = await fetch(`http://localhost:8080/api/dev/article/${targetArticle.id}/comments`);
+          const res = await fetch(`${API_BASE}/dev/article/${targetArticle.id}/comments`);
           if (res.ok) devComments = await res.json();
-        } catch { /* コメント取得失敗は無視 */ }
+          else console.warn('[MemoEditor] Devコメント取得失敗:', res.status);
+        } catch (e) { console.warn('[MemoEditor] Devコメント取得エラー:', e); }
       } else if (isDev && !isExternal && Array.isArray(targetArticle.devComments)) {
         devComments = targetArticle.devComments;
       }
@@ -110,7 +121,7 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
       if (comments && comments.length > 0) articlePayload.comments = comments;
       if (devComments && devComments.length > 0) articlePayload.devComments = devComments;
 
-      const response = await fetch('http://localhost:8080/api/memos', {
+      const response = await fetch(`${API_BASE}/memos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, article: articlePayload }),
@@ -118,9 +129,23 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
 
       if (response.ok) {
         setIsSaved(true);
+        // 保存後にDBの記事（数値ID付き）を取得してタブを更新する
+        if (targetArticle.url && onArticleSaved) {
+          try {
+            const articleRes = await fetch(
+              `${API_BASE}/articles/by-url?url=${encodeURIComponent(targetArticle.url)}`
+            );
+            if (articleRes.ok) {
+              const savedArticle = await articleRes.json();
+              onArticleSaved(savedArticle);
+            }
+          } catch (e) {
+            console.warn('[MemoEditor] 保存後の記事取得エラー:', e);
+          }
+        }
       }
     } catch (error) {
-      // Handle error silently
+      console.error('[MemoEditor] 保存エラー:', error);
     } finally {
       setIsSaving(false);
     }

@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-
-const API_BASE = 'http://localhost:8080/api';
+import { API_BASE } from '../lib/api';
 
 export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: any) => void }) {
   const [activeMain, setActiveMain] = useState<'database' | 'qiita' | 'dev'>('database');

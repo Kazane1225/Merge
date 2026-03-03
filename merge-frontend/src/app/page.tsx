@@ -8,6 +8,7 @@ import HistoryView from "../components/HistoryView";
 import GraphView from "../components/GraphView";
 import { getArticleSource, getBadgeClasses, getSourceLabel } from "../lib/articleHelpers";
 import { ArticleTab, HistoryEntry } from "../types/article";
+import { API_BASE } from "../lib/api";
 
 const MAX_TABS = 5;
 const MAX_HISTORY = 50;
@@ -51,7 +52,7 @@ export default function Home() {
     // Qiitaの記事詳細取得（IDが数値で、本文がない場合）
     if (article.id && typeof article.id === 'number' && !article.rendered_body && !article.body_html) {
       try {
-        const response = await fetch(`http://localhost:8080/api/qiita/article/${article.id}`);
+        const response = await fetch(`${API_BASE}/qiita/article/${article.id}`);
         if (response.ok && response.headers.get('content-length') !== '0') {
           const detailArticle = await response.json();
           if (detailArticle && detailArticle.id) {
@@ -65,7 +66,7 @@ export default function Home() {
     // Dev.toの記事詳細取得（Qiitaではない場合で、本文がない場合）
     else if (article.id && !article.body_html && !article.rendered_body) {
       try {
-        const response = await fetch(`http://localhost:8080/api/dev/article/${article.id}`);
+        const response = await fetch(`${API_BASE}/dev/article/${article.id}`);
         if (response.ok) {
           const detailArticle = await response.json();
           if (detailArticle && detailArticle.id) {
@@ -114,6 +115,16 @@ export default function Home() {
 
     // ビューモードを通常表示に切り替え
     setViewMode('normal');
+  };
+
+  const handleArticleSaved = (savedArticle: any) => {
+    setTabs(prev =>
+      prev.map(tab =>
+        tab.article?.url === savedArticle.url
+          ? { ...tab, article: savedArticle }
+          : tab
+      )
+    );
   };
 
   const handleCloseTab = (tabId: string, e?: React.MouseEvent) => {
@@ -367,14 +378,14 @@ export default function Home() {
             className={`w-1 bg-slate-700 hover:bg-indigo-500 transition-colors cursor-col-resize ${isResizing ? 'bg-indigo-500' : ''}`}
           />
           <aside style={{ width: memoWidth }} className="flex-shrink-0 flex flex-col border-l border-slate-800 bg-[#0F172A] z-20 hidden lg:flex overflow-hidden">
-            <MemoEditor targetArticle={selectedArticle} />
+            <MemoEditor targetArticle={selectedArticle} onArticleSaved={handleArticleSaved} />
           </aside>
         </div>
       </main>
 
       {/* Mobile Memo Editor */}
       <aside className="lg:hidden w-full h-96 flex-shrink-0 flex flex-col border-t border-slate-800 bg-[#0F172A] z-20">
-        <MemoEditor targetArticle={selectedArticle} />
+        <MemoEditor targetArticle={selectedArticle} onArticleSaved={handleArticleSaved} />
       </aside>
 
     </div>

@@ -1,6 +1,7 @@
 package com.merge.merge_backend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.merge.merge_backend.repository.ArticleRepository;
 import com.merge.merge_backend.service.ArticleService;
 import com.merge.merge_backend.entity.Article;
 import java.util.List;
@@ -20,7 +22,10 @@ public class ArticleController {
 
     @Autowired
     private ArticleService articleService;
-    
+
+    @Autowired
+    private ArticleRepository articleRepository;
+
     @GetMapping("/articles")
     public List<Article> getAllArticles() {
         return articleService.getAllArticles();
@@ -42,5 +47,12 @@ public class ArticleController {
     @DeleteMapping("/articles/{id}")
     public void deleteArticle(@PathVariable Long id) {
         articleService.deleteArticle(id);
+    }
+
+    /** URL で記事を検索（保存後にフロントが数値 ID を取得するために使用） */
+    @GetMapping("/articles/by-url")
+    public ResponseEntity<Article> getArticleByUrl(@RequestParam String url) {
+        Article article = articleRepository.findByUrl(url);
+        return article != null ? ResponseEntity.ok(article) : ResponseEntity.notFound().build();
     }
 }
