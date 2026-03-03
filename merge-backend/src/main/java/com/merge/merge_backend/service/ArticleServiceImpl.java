@@ -30,6 +30,12 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     public Article createArticle(Article article) {
+        if (article.getComments() != null) {
+            article.getComments().forEach(comment -> comment.setArticle(article));
+        }
+        if (article.getDevComments() != null) {
+            article.getDevComments().forEach(comment -> comment.setArticle(article));
+        }
         return articleRepository.save(article);
     }
 

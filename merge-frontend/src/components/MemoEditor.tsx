@@ -60,34 +60,62 @@ export default function MemoEditor({ targetArticle }: { targetArticle: any }) {
     }
   }, [showArticleBody, targetArticle?.rendered_body, targetArticle?.body_html]);
 
-  // メモが更新されたらisSavedをリセット
+  // 記事またはメモ内容が変わったらisSavedをリセット
   useEffect(() => {
     setIsSaved(false);
-  }, [content]);
+  }, [targetArticle?.url ?? targetArticle?.id, content]);
 
   const handleSave = async () => {
     if (!targetArticle) {
       alert("記事が選択されていません");
       return;
     }
-    
+
     setIsSaving(true);
     try {
+      const isQiita = targetArticle.url?.includes('qiita.com');
+      const isDev = targetArticle.url?.includes('dev.to');
+      const isExternal = typeof targetArticle.id !== 'number';
+
+      // 外部記事（未保存）のみコメントをAPIから取得
+      // 保存済みDB記事はarticle.comments / article.devCommentsをそのまま使う
+      let comments: any[] | undefined = undefined;
+      let devComments: any[] | undefined = undefined;
+
+      if (isQiita && isExternal) {
+        try {
+          const res = await fetch(`http://localhost:8080/api/qiita/article/${targetArticle.id}/comments`);
+          if (res.ok) comments = await res.json();
+        } catch { /* コメント取得失敗は無視 */ }
+      } else if (isQiita && !isExternal && Array.isArray(targetArticle.comments)) {
+        comments = targetArticle.comments;
+      }
+
+      if (isDev && isExternal) {
+        try {
+          const res = await fetch(`http://localhost:8080/api/dev/article/${targetArticle.id}/comments`);
+          if (res.ok) devComments = await res.json();
+        } catch { /* コメント取得失敗は無視 */ }
+      } else if (isDev && !isExternal && Array.isArray(targetArticle.devComments)) {
+        devComments = targetArticle.devComments;
+      }
+
+      const articlePayload: any = {
+        id: typeof targetArticle.id === 'number' ? targetArticle.id : null,
+        title: targetArticle.title,
+        url: targetArticle.url,
+        rendered_body: targetArticle.rendered_body || targetArticle.body_html,
+        cover_image: targetArticle.cover_image || targetArticle.coverImage,
+      };
+      if (comments && comments.length > 0) articlePayload.comments = comments;
+      if (devComments && devComments.length > 0) articlePayload.devComments = devComments;
+
       const response = await fetch('http://localhost:8080/api/memos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          content: content,
-          article: {
-            id: typeof targetArticle.id === 'number' ? targetArticle.id : null,
-            title: targetArticle.title,
-            url: targetArticle.url,
-            rendered_body: targetArticle.rendered_body || targetArticle.body_html,
-            cover_image: targetArticle.cover_image || targetArticle.coverImage
-          }
-        }),
+        body: JSON.stringify({ content, article: articlePayload }),
       });
-      
+
       if (response.ok) {
         setIsSaved(true);
       }

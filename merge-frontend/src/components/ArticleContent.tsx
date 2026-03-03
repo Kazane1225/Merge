@@ -164,11 +164,31 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
     }
   }, [article]);
 
-  // Qiitaコメントを記事選択後すぐに非同期取得
+  // コメントを記事選択後すぐに取得（保存済み記事はarticleに埋め込み済み、未保存はAPIから取得）
   useEffect(() => {
-    const isQiita = article?.url?.includes('qiita.com') && article?.id;
-    const isDev = article?.url?.includes('dev.to') && article?.id;
+    const isQiita = article?.url?.includes('qiita.com');
+    const isDev = article?.url?.includes('dev.to');
+
     if (!isQiita && !isDev) {
+      setComments([]);
+      setCommentsLoading(false);
+      return;
+    }
+
+    // 保存済み記事: article.comments / article.devComments が存在すればそれを使う
+    if (isQiita && article.comments !== undefined) {
+      setComments(Array.isArray(article.comments) ? article.comments : []);
+      setCommentsLoading(false);
+      return;
+    }
+    if (isDev && article.devComments !== undefined) {
+      setComments(Array.isArray(article.devComments) ? article.devComments : []);
+      setCommentsLoading(false);
+      return;
+    }
+
+    // 未保存記事: 外部APIから取得
+    if (!article?.id) {
       setComments([]);
       setCommentsLoading(false);
       return;
@@ -809,7 +829,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
 
                       const renderComment = (c: any, depth: number = 0) => {
                         const user = c.user as any;
-                        const initial = (user?.id_code ?? '?')[0].toUpperCase();
+                        const initial = (user?.id_code ?? user?.name ?? '?')[0].toUpperCase();
                         const isReply = depth >= 1;
                         const isNestedReply = depth >= 2;
                         return (
@@ -820,7 +840,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
                                 {user?.profile_image ? (
                                   <img
                                     src={user.profile_image}
-                                    alt={user.id_code}
+                                    alt={user.name ?? user.id_code}
                                     className={`rounded-full border-2 border-slate-700/60 group-hover:border-indigo-600/50 transition-colors ${isReply ? 'w-7 h-7' : 'w-9 h-9'}`}
                                   />
                                 ) : (
