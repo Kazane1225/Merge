@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import type { Article } from '../types/article';
 import { getArticleSource } from '../lib/articleHelpers';
 import { useArticleHtml } from '../hooks/useArticleHtml';
 import { useArticleComments } from '../hooks/useArticleComments';
@@ -12,7 +13,7 @@ import TableOfContents from './TableOfContents';
 import ArticleBody from './ArticleBody';
 
 interface ArticleContentProps {
-  article: any;
+  article: Article | null;
   className?: string;
 }
 

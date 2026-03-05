@@ -1,5 +1,8 @@
 'use client';
 
+import type { QiitaComment, DevComment } from '../types/article';
+import type { ArticleSource } from '../lib/articleHelpers';
+
 // コメント本文のHTML用スタイル（Qiita/Dev.to共通）
 const commentBodyClass = [
   'text-sm text-slate-300 leading-[1.75]',
@@ -67,8 +70,8 @@ const CommentsHeader = ({ count }: { count: number }) => (
 
 // ----- Qiitaコメント -----
 
-const QiitaCommentItem = ({ comment }: { comment: any }) => {
-  const user = comment.user as any;
+const QiitaCommentItem = ({ comment }: { comment: QiitaComment }) => {
+  const user = comment.user;
   const initial = (user?.id ?? '?')[0].toUpperCase();
 
   return (
@@ -107,8 +110,8 @@ const QiitaCommentItem = ({ comment }: { comment: any }) => {
 
 // ----- Dev.toコメント（ネスト対応） -----
 
-const DevCommentItem = ({ comment, depth = 0 }: { comment: any; depth?: number }) => {
-  const user = comment.user as any;
+const DevCommentItem = ({ comment, depth = 0 }: { comment: DevComment; depth?: number }) => {
+  const user = comment.user;
   const initial = (user?.id_code || user?.name || '?')[0].toUpperCase();
   const isReply = depth >= 1;
   const isNestedReply = depth >= 2;
@@ -142,7 +145,7 @@ const DevCommentItem = ({ comment, depth = 0 }: { comment: any; depth?: number }
           )}
           {comment.children && comment.children.length > 0 && (
             <div className="mt-3 pl-1 border-l border-slate-700/40 space-y-0">
-              {comment.children.map((child: any) => (
+              {comment.children.map((child: DevComment) => (
                 <DevCommentItem
                   key={child.id_code}
                   comment={child}
@@ -160,9 +163,9 @@ const DevCommentItem = ({ comment, depth = 0 }: { comment: any; depth?: number }
 // ----- メインエクスポート -----
 
 interface ArticleCommentsProps {
-  source: string;
-  articleId: any;
-  comments: any[];
+  source: ArticleSource;
+  articleId: number | string;
+  comments: QiitaComment[] | DevComment[];
   commentsLoading: boolean;
 }
 
@@ -182,8 +185,8 @@ export default function ArticleComments({ source, articleId, comments, commentsL
       ) : (
         <div className="space-y-1">
           {source === 'qiita'
-            ? comments.map((c: any) => <QiitaCommentItem key={c.id} comment={c} />)
-            : comments.map((c: any, idx: number) => <DevCommentItem key={c.id_code ?? `dev-${idx}`} comment={c} />)
+            ? (comments as QiitaComment[]).map((c) => <QiitaCommentItem key={c.id} comment={c} />)
+            : (comments as DevComment[]).map((c, idx) => <DevCommentItem key={c.id_code ?? `dev-${idx}`} comment={c} />)
           }
         </div>
       )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import clsx from 'clsx';
+import type { Article } from '../types/article';
 import { API_BASE } from '../lib/api';
 
 const styles = {
@@ -25,10 +26,10 @@ const styles = {
   },
 };
 
-export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: any) => void }) {
+export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: Article) => void }) {
   const [activeMain, setActiveMain] = useState<'database' | 'qiita' | 'dev'>('database');
   const [activeSub, setActiveSub] = useState<'search' | 'trending' | 'timeline'>('search');
-  const [articles, setArticles] = useState<any[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [keyword, setKeyword] = useState('');
   const [sort, setSort] = useState<'rel' | 'count' | 'created'>('rel');
   const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month'>('all');
@@ -295,13 +296,13 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
           <EmptyState>記事が見つかりません</EmptyState>
         ) : (
           <div className="space-y-3 p-3">
-            {articles.map((article: any) => (
+            {articles.map((article) => (
               <ArticleCard
                 key={article.id}
                 article={article}
                 source={activeMain}
                 onSelect={() => onSelectArticle(article)}
-                onDelete={activeMain === 'database' ? (e) => handleDelete(e, article.id) : undefined}
+                onDelete={activeMain === 'database' ? (e) => handleDelete(e, article.id as number) : undefined}
               />
             ))}
           </div>
@@ -325,7 +326,7 @@ const EmptyState = ({ children }: { children: string }) => (
 );
 
 interface ArticleCardProps {
-  article: any;
+  article: Article;
   source: 'database' | 'qiita' | 'dev';
   onSelect: () => void;
   onDelete?: (e: React.MouseEvent) => void;
@@ -357,18 +358,18 @@ const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) 
         </span>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-slate-100 line-clamp-2 group-hover:text-indigo-300 transition-colors">
-            {article.title || article.name || 'No title'}
+            {article.title || 'No title'}
           </h3>
         </div>
       </div>
-      <p className="text-xs text-slate-400 mt-2 line-clamp-1 truncate">{article.url || article.link || ''}</p>
+      <p className="text-xs text-slate-400 mt-2 line-clamp-1 truncate">{article.url}</p>
       <div className="text-xs text-slate-500 mt-2 flex gap-4 flex-wrap">
         {(article.likes_count !== undefined || article.positive_reactions_count !== undefined) && (
           <span>❤️ {article.likes_count ?? article.positive_reactions_count ?? 0}</span>
         )}
         {article.views !== undefined && <span>👁 {article.views}</span>}
         {(article.created_at || article.published_at) && (
-          <span>{new Date(article.created_at || article.published_at).toLocaleDateString('ja-JP')}</span>
+          <span>{new Date((article.created_at || article.published_at)!).toLocaleDateString('ja-JP')}</span>
         )}
       </div>
       {onDelete && (

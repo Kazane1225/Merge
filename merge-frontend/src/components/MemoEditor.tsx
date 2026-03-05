@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import clsx from 'clsx';
+import type { Article } from '../types/article';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -48,8 +49,8 @@ export default function MemoEditor({
   targetArticle,
   onArticleSaved,
 }: {
-  targetArticle: any;
-  onArticleSaved?: (savedArticle: any) => void;
+  targetArticle: Article | null;
+  onArticleSaved?: (savedArticle: Article) => void;
 }) {
   const [content, setContent] = useState('');
   const [isPreview, setIsPreview] = useState(false);
@@ -306,12 +307,12 @@ export default function MemoEditor({
             onChange={(e) => setContent(e.target.value)}
             spellCheck={false}
           />
-        ) : showArticleBody && (targetArticle.rendered_body || targetArticle.body_html) ? (
+        ) : showArticleBody && targetArticle && (targetArticle.rendered_body || targetArticle.body_html) ? (
           <div className="w-full h-full p-6 overflow-y-auto custom-scrollbar bg-[#0B1120]">
             <div className="article-body text-sm text-slate-300 prose prose-invert max-w-none">
               <div 
                 dangerouslySetInnerHTML={{ 
-                  __html: targetArticle.rendered_body || targetArticle.body_html || ''
+                  __html: targetArticle?.rendered_body || targetArticle?.body_html || ''
                 }} 
                 className={styles.proseArticle}
               />

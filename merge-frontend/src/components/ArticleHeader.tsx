@@ -1,9 +1,10 @@
 'use client';
 
+import type { Article } from '../types/article';
 import { getBadgeClasses, getSourceLabel, getArticleSource } from '../lib/articleHelpers';
 
 interface ArticleHeaderProps {
-  article: any;
+  article: Article;
 }
 
 /**

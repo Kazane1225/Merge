@@ -8,7 +8,7 @@ import ArticleContent from "../components/ArticleContent";
 import HistoryView from "../components/HistoryView";
 import GraphView from "../components/GraphView";
 import { getArticleSource, getBadgeClasses, getSourceLabel } from "../lib/articleHelpers";
-import { ArticleTab, HistoryEntry } from "../types/article";
+import { ArticleTab, HistoryEntry, Article } from "../types/article";
 import { API_BASE } from "../lib/api";
 
 const styles = {
@@ -67,7 +67,7 @@ export default function Home() {
     setIsResizing(false);
   };
 
-  const handleSelectArticle = async (article: any) => {
+  const handleSelectArticle = async (article: Article) => {
     let finalArticle = article;
     
     // Qiitaの記事詳細取得（IDが数値で、本文がない場合）
@@ -138,7 +138,7 @@ export default function Home() {
     setViewMode('normal');
   };
 
-  const handleArticleSaved = (savedArticle: any) => {
+  const handleArticleSaved = (savedArticle: Article) => {
     setTabs(prev =>
       prev.map(tab =>
         tab.article?.url === savedArticle.url
@@ -184,7 +184,7 @@ export default function Home() {
     ));
   };
   
-  const addToHistory = (article: any, tabId: string) => {
+  const addToHistory = (article: Article, tabId: string) => {
     const newEntry: HistoryEntry = {
       article,
       timestamp: Date.now(),
@@ -366,12 +366,12 @@ export default function Home() {
               // Split Viewモード
               <>
                 <ArticleContent 
-                  article={tabs.find(t => t.id === splitViewTabs[0])?.article} 
+                  article={tabs.find(t => t.id === splitViewTabs[0])?.article ?? null} 
                   className="flex-1"
                 />
                 <div className="w-1 bg-indigo-500/50" />
                 <ArticleContent 
-                  article={tabs.find(t => t.id === splitViewTabs[1])?.article}
+                  article={tabs.find(t => t.id === splitViewTabs[1])?.article ?? null}
                   className="flex-1"
                 />
               </>

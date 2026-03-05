@@ -1,7 +1,9 @@
 'use client';
 
+import type { Article, QiitaTag } from '../types/article';
+
 interface ArticleMetaProps {
-  article: any;
+  article: Article;
   readingTime: number;
 }
 
@@ -20,7 +22,7 @@ export default function ArticleMeta({ article, readingTime }: ArticleMetaProps) 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <span>
-              {new Date(article.created_at || article.published_at).toLocaleDateString('ja-JP', {
+              {new Date((article.created_at || article.published_at)!).toLocaleDateString('ja-JP', {
                 year: 'numeric', month: 'long', day: 'numeric',
               })}
             </span>
@@ -77,7 +79,7 @@ export default function ArticleMeta({ article, readingTime }: ArticleMetaProps) 
       {article.tags && article.tags.length > 0 && (
         <div className="mt-4 pt-4 border-t border-slate-800">
           <div className="flex flex-wrap gap-2">
-            {article.tags.slice(0, 8).map((tag: any, idx: number) => (
+            {article.tags.slice(0, 8).map((tag: QiitaTag | string, idx: number) => (
               <span
                 key={idx}
                 className="text-xs px-3 py-1 bg-indigo-900/40 text-indigo-300 border border-indigo-700/50 rounded-full hover:bg-indigo-800/50 transition-colors"

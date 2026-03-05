@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import clsx from 'clsx';
 import { getArticleSource } from "../lib/articleHelpers";
-import { ArticleTab, HistoryEntry } from "../types/article";
+import { ArticleTab, HistoryEntry, Article } from "../types/article";
 import { API_BASE } from '../lib/api';
 
 const styles = {
@@ -15,7 +15,7 @@ const styles = {
 interface GraphViewProps {
   tabs: ArticleTab[];
   history: HistoryEntry[];
-  onSelectArticle: (a: any) => void;
+  onSelectArticle: (a: Article) => void;
   setViewMode: (mode: 'normal' | 'history' | 'graph') => void;
   className?: string;
 }
@@ -197,7 +197,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
   };
 
   // コンテンツベースの類似度計算
-  const calculateContentSimilarity = (article1: any, article2: any): number => {
+  const calculateContentSimilarity = (article1: Article, article2: Article): number => {
     const text1 = extractText(article1.rendered_body || article1.body_html || '') + ' ' + (article1.title || '');
     const text2 = extractText(article2.rendered_body || article2.body_html || '') + ' ' + (article2.title || '');
 
@@ -217,7 +217,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
     const documentFrequency = new Map<string, number>();
 
     dbTabs.forEach(tab => {
-      const text = extractText(tab.article.rendered_body || tab.article.renderedBody || tab.article.body_html || '') + ' ' + (tab.article.title || '');
+      const text = extractText(tab.article.rendered_body || tab.article.body_html || '') + ' ' + (tab.article.title || '');
       const uniqueKeywords = new Set(extractKeywords(text));
       uniqueKeywords.forEach(keyword => {
         documentFrequency.set(keyword, (documentFrequency.get(keyword) || 0) + 1);
@@ -249,7 +249,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
 
   // ノードとエッジを生成（蜘蛛の巣状レイアウト）
   const generateGraph = () => {
-    const nodes: Array<{ id: string; article: any; x: number; y: number; source: string }> = [];
+    const nodes: Array<{ id: string; article: Article; x: number; y: number; source: string }> = [];
     const edges: Array<{ from: string; to: string; strength: number; keywords: string[] }> = [];
 
     if (dbTabs.length === 0) return { nodes, edges };
@@ -267,8 +267,8 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
     // エッジを作成して各ノードの接続数を計算
     for (let i = 0; i < tempNodes.length; i++) {
       for (let j = i + 1; j < tempNodes.length; j++) {
-        const text1 = extractText(tempNodes[i].article.rendered_body || tempNodes[i].article.renderedBody || tempNodes[i].article.body_html || '') + ' ' + (tempNodes[i].article.title || '');
-        const text2 = extractText(tempNodes[j].article.rendered_body || tempNodes[j].article.renderedBody || tempNodes[j].article.body_html || '') + ' ' + (tempNodes[j].article.title || '');
+        const text1 = extractText(tempNodes[i].article.rendered_body || tempNodes[i].article.body_html || '') + ' ' + (tempNodes[i].article.title || '');
+        const text2 = extractText(tempNodes[j].article.rendered_body || tempNodes[j].article.body_html || '') + ' ' + (tempNodes[j].article.title || '');
         const keywords1 = new Set(extractKeywords(text1));
         const keywords2 = new Set(extractKeywords(text2));
         const commonKeywords = Array.from(keywords1).filter(k => keywords2.has(k));

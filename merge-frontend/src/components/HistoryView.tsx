@@ -3,7 +3,7 @@
 import React from "react";
 import clsx from 'clsx';
 import { getArticleSource, getBadgeClasses, getSourceLabel } from "../lib/articleHelpers";
-import { HistoryEntry } from "../types/article";
+import { HistoryEntry, Article } from "../types/article";
 
 const styles = {
   card: "p-4 bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all group",
@@ -13,7 +13,7 @@ const styles = {
 
 interface HistoryViewProps {
   history: HistoryEntry[];
-  onSelectArticle: (a: any) => void;
+  onSelectArticle: (a: Article) => void;
   className?: string;
 }
 

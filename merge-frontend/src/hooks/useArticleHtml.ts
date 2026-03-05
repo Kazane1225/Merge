@@ -1,4 +1,5 @@
 import { useState, useEffect, RefObject, useMemo } from 'react';
+import type { Article } from '../types/article';
 import { processArticleHtml, TocItem } from '../lib/articleProcessor';
 
 interface UseArticleHtmlResult {
@@ -12,7 +13,7 @@ interface UseArticleHtmlResult {
  * contentRef はリンク外部開き処理でDOM参照に使用する。
  */
 export function useArticleHtml(
-  article: any,
+  article: Article | null,
   contentRef: RefObject<HTMLDivElement | null>
 ): UseArticleHtmlResult {
   const [processedHtml, setProcessedHtml] = useState('');
@@ -21,7 +22,7 @@ export function useArticleHtml(
   // 記事が変わったらHTML前処理 → state更新
   useEffect(() => {
     if (article && (article.rendered_body || article.body_html)) {
-      const { html, toc } = processArticleHtml(article.rendered_body || article.body_html);
+      const { html, toc } = processArticleHtml(article.rendered_body || article.body_html || '');
       setProcessedHtml(html);
       setTocItems(toc);
       if (contentRef.current) {

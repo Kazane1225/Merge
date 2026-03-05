@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import type { Article, QiitaComment, DevComment } from '../types/article';
 import { API_BASE } from '../lib/api';
 
 interface UseArticleCommentsResult {
-  comments: any[];
+  comments: QiitaComment[] | DevComment[];
   commentsLoading: boolean;
 }
 
@@ -11,11 +12,16 @@ interface UseArticleCommentsResult {
  * 保存済み記事は article.comments / article.devComments を直接参照し、
  * 未保存記事は外部APIから取得する。
  */
-export function useArticleComments(article: any): UseArticleCommentsResult {
-  const [comments, setComments] = useState<any[]>([]);
+export function useArticleComments(article: Article | null): UseArticleCommentsResult {
+  const [comments, setComments] = useState<QiitaComment[] | DevComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
 
   useEffect(() => {
+    if (!article) {
+      setComments([]);
+      setCommentsLoading(false);
+      return;
+    }
     const isQiita = article?.url?.includes('qiita.com');
     const isDev = article?.url?.includes('dev.to');
 

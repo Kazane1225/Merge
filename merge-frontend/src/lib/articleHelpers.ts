@@ -1,6 +1,8 @@
+import type { Article } from '../types/article';
+
 export type ArticleSource = 'database' | 'qiita' | 'dev';
 
-export const getArticleSource = (article: any): ArticleSource => {
+export const getArticleSource = (article: Article): ArticleSource => {
   if (article.url?.includes('qiita.com')) return 'qiita';
   if (article.url?.includes('dev.to')) return 'dev';
   return 'database';
