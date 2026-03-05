@@ -1,8 +1,15 @@
 'use client';
 
 import React from "react";
+import clsx from 'clsx';
 import { getArticleSource, getBadgeClasses, getSourceLabel } from "../lib/articleHelpers";
 import { HistoryEntry } from "../types/article";
+
+const styles = {
+  card: "p-4 bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all group",
+  badge: "text-[9px] px-1.5 py-0.5 rounded font-bold uppercase border flex-shrink-0",
+  dateHeader: "text-sm font-bold text-indigo-400 mb-3 sticky top-0 bg-[#0B1120]/95 backdrop-blur py-2 border-b border-slate-800",
+};
 
 interface HistoryViewProps {
   history: HistoryEntry[];
@@ -28,7 +35,7 @@ export default function HistoryView({ history, onSelectArticle, className }: His
   const grouped = groupByDate(history);
 
   return (
-    <div className={`overflow-y-auto ${className} bg-[#0B1120]`}>
+    <div className={clsx('overflow-y-auto bg-[#0B1120]', className)}>
       <div className="w-full max-w-5xl mx-auto px-8 py-8">
         <h2 className="text-3xl font-bold text-slate-100 mb-8 flex items-center gap-3">
           <span>🕐</span>
@@ -43,7 +50,7 @@ export default function HistoryView({ history, onSelectArticle, className }: His
           <div className="space-y-8">
             {Object.entries(grouped).map(([date, entries]) => (
               <div key={date}>
-                <h3 className="text-sm font-bold text-indigo-400 mb-3 sticky top-0 bg-[#0B1120]/95 backdrop-blur py-2 border-b border-slate-800">
+                <h3 className={styles.dateHeader}>
                   {date}
                 </h3>
                 <div className="space-y-2">
@@ -59,11 +66,11 @@ export default function HistoryView({ history, onSelectArticle, className }: His
                       <div
                         key={`${entry.tabId}-${idx}`}
                         onClick={() => onSelectArticle(entry.article)}
-                        className="p-4 bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all group"
+                        className={styles.card}
                       >
                         <div className="flex items-start gap-3">
                           <span className="text-xs text-slate-500 font-mono mt-1">{time}</span>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase border flex-shrink-0 ${getBadgeClasses(source)}`}>
+                          <span className={clsx(styles.badge, getBadgeClasses(source))}>
                             {badgeLabel}
                           </span>
                           <div className="flex-1 min-w-0">

@@ -1,7 +1,29 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import clsx from 'clsx';
 import { API_BASE } from '../lib/api';
+
+const styles = {
+  mainTab: {
+    base: "px-6 py-3 text-sm font-bold transition-colors border-b-2",
+    active: "text-indigo-400 border-indigo-400",
+    inactive: "text-slate-500 hover:text-slate-300 border-transparent",
+  },
+  subTab: {
+    base: "px-4 py-2.5 text-xs font-semibold transition-colors border-b-2",
+    active: "text-indigo-300 border-indigo-300",
+    inactive: "text-slate-400 hover:text-slate-300 border-transparent",
+  },
+  input: "flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none disabled:opacity-60",
+  select: "flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60",
+  goBtn: "bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-500 disabled:opacity-60",
+  card: {
+    base: "p-4 bg-gradient-to-r from-slate-800/60 to-slate-800/40 hover:from-slate-700/80 hover:to-slate-700/60 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all duration-200 group relative shadow-md hover:shadow-lg hover:shadow-indigo-500/10",
+    badge: "text-[10px] px-2 py-1 rounded font-bold uppercase border flex-shrink-0 h-fit",
+    deleteBtn: "absolute top-3 right-3 p-1.5 bg-red-600/30 hover:bg-red-500/60 text-red-300 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all duration-200 border border-red-600/40",
+  },
+};
 
 export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: any) => void }) {
   const [activeMain, setActiveMain] = useState<'database' | 'qiita' | 'dev'>('database');
@@ -151,11 +173,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
           <button
             key={tab}
             onClick={() => switchTab(tab as typeof activeMain, 'search')}
-            className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${
-              activeMain === tab
-                ? 'text-indigo-400 border-indigo-400'
-                : 'text-slate-500 hover:text-slate-300 border-transparent'
-            }`}
+            className={clsx(styles.mainTab.base, activeMain === tab ? styles.mainTab.active : styles.mainTab.inactive)}
           >
             {tab === 'database' ? 'Database' : tab === 'qiita' ? 'Qiita' : 'Dev.to'}
           </button>
@@ -169,11 +187,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
             <button
               key={sub}
               onClick={() => switchTab(activeMain, sub as typeof activeSub)}
-              className={`px-4 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-                activeSub === sub
-                  ? 'text-indigo-300 border-indigo-300'
-                  : 'text-slate-400 hover:text-slate-300 border-transparent'
-              }`}
+              className={clsx(styles.subTab.base, activeSub === sub ? styles.subTab.active : styles.subTab.inactive)}
             >
               {sub === 'search' ? '検索' : sub === 'trending' ? 'トレンド' : 'タイムライン'}
             </button>
@@ -188,7 +202,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
             <div className="flex gap-2">
               <input
                 type="text"
-                className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none disabled:opacity-60"
+                className={styles.input}
                 placeholder={activeMain === 'database' ? 'Search DB articles...' : 'Search articles...'}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
@@ -198,7 +212,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
               <button
                 onClick={() => fetchArticles()}
                 disabled={loading}
-                className="bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-500 disabled:opacity-60"
+                className={styles.goBtn}
               >
                 {loading ? <Spinner /> : 'Go'}
               </button>
@@ -209,7 +223,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
                 value={sort}
                 onChange={(e) => handleSort(e.target.value as any)}
                 disabled={loading}
-                className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
+                className={styles.select}
               >
                 <option value="rel">関連度順</option>
                 <option value="count">{activeMain === 'database' ? '新着順' : activeMain === 'qiita' ? 'いいね順' : '反応順'}</option>
@@ -220,7 +234,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
                 value={period}
                 onChange={(e) => handlePeriod(e.target.value as any)}
                 disabled={loading}
-                className="flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
+                className={styles.select}
               >
                 <option value="all">全期間</option>
                 <option value="year">1年以内</option>
@@ -241,7 +255,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
               value={period}
               onChange={(e) => setPeriod(e.target.value as any)}
               disabled={loading}
-              className="w-full bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60"
+              className={clsx(styles.select, 'w-full')}
             >
               <option value="all">全期間</option>
               <option value="year">1年以内</option>
@@ -252,7 +266,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
             <button
               onClick={() => fetchArticles()}
               disabled={loading}
-              className="w-full bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-500 disabled:opacity-60"
+              className={clsx(styles.goBtn, 'w-full')}
             >
               {loading ? <Spinner /> : 'Go'}
             </button>
@@ -266,7 +280,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
           <button
             onClick={() => fetchArticles()}
             disabled={loading}
-            className="w-full bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-500 disabled:opacity-60"
+            className={clsx(styles.goBtn, 'w-full')}
           >
             {loading ? <Spinner /> : 'Go'}
           </button>
@@ -335,10 +349,10 @@ const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) 
   return (
     <div
       onClick={onSelect}
-      className="p-4 bg-gradient-to-r from-slate-800/60 to-slate-800/40 hover:from-slate-700/80 hover:to-slate-700/60 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all duration-200 group relative shadow-md hover:shadow-lg hover:shadow-indigo-500/10"
+      className={styles.card.base}
     >
       <div className="flex gap-3 items-start">
-        <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase border flex-shrink-0 h-fit ${getBadgeClasses()}`}>
+        <span className={clsx(styles.card.badge, getBadgeClasses())}>
           {badge}
         </span>
         <div className="flex-1 min-w-0">
@@ -360,7 +374,7 @@ const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) 
       {onDelete && (
         <button
           onClick={onDelete}
-          className="absolute top-3 right-3 p-1.5 bg-red-600/30 hover:bg-red-500/60 text-red-300 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all duration-200 border border-red-600/40"
+          className={styles.card.deleteBtn}
         >
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />

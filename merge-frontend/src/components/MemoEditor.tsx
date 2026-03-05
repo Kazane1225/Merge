@@ -1,11 +1,48 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { API_BASE } from '../lib/api';
+
+const styles = {
+  modeBtn: {
+    base: "text-[10px] px-3 py-1 rounded transition-all",
+    write: "bg-slate-600 text-white shadow",
+    preview: "bg-indigo-600 text-white shadow",
+    article: "bg-purple-600 text-white shadow",
+    inactive: "text-slate-400 hover:text-slate-200",
+  },
+  saveBtn: {
+    base: "text-white text-xs px-3 py-1.5 rounded-sm transition-all font-medium tracking-wide flex items-center gap-1.5 disabled:opacity-70 cursor-default",
+    saved: "bg-green-600",
+    saving: "bg-indigo-600",
+    default: "bg-emerald-600 hover:bg-emerald-500",
+  },
+  toolbarBtn: "text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors",
+  proseArticle: [
+    "prose prose-invert max-w-none",
+    "prose-p:text-slate-300 prose-p:mb-3",
+    "prose-headings:text-slate-100 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg",
+    "prose-strong:text-slate-200 prose-strong:font-bold",
+    "prose-em:text-slate-300 prose-em:italic",
+    "prose-code:text-amber-300 prose-code:bg-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded",
+    "prose-pre:bg-slate-800 prose-pre:text-slate-300 prose-pre:p-4 prose-pre:rounded prose-pre:overflow-x-auto",
+    "prose-blockquote:text-slate-400 prose-blockquote:border-l-4 prose-blockquote:border-slate-600 prose-blockquote:pl-4 prose-blockquote:italic",
+    "prose-a:text-indigo-400 prose-a:hover:text-indigo-300 prose-a:underline",
+    "prose-img:rounded prose-img:shadow-lg",
+    "prose-li:text-slate-300",
+    "prose-table:border prose-table:border-slate-700",
+    "prose-thead:bg-slate-800",
+    "prose-th:border prose-th:border-slate-700 prose-th:text-slate-200 prose-th:p-2",
+    "prose-td:border prose-td:border-slate-700 prose-td:p-2",
+    "[&_blockquote]:border-l-4 [&_blockquote]:border-indigo-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-400",
+    "[&_iframe]:w-full [&_iframe]:rounded [&_iframe]:mt-4 [&_iframe]:mb-4",
+  ].join(' '),
+};
 
 export default function MemoEditor({
   targetArticle,
@@ -173,20 +210,20 @@ export default function MemoEditor({
         <div className="flex gap-1 bg-slate-800/50 p-1 rounded">
           <button
             onClick={() => setIsPreview(false)}
-            className={`text-[10px] px-3 py-1 rounded transition-all ${!isPreview ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+            className={clsx(styles.modeBtn.base, !isPreview ? styles.modeBtn.write : styles.modeBtn.inactive)}
           >
             WRITE
           </button>
           <button
             onClick={() => { setIsPreview(true); setShowArticleBody(false); }}
-            className={`text-[10px] px-3 py-1 rounded transition-all ${isPreview && !showArticleBody ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+            className={clsx(styles.modeBtn.base, isPreview && !showArticleBody ? styles.modeBtn.preview : styles.modeBtn.inactive)}
           >
             PREVIEW
           </button>
           {targetArticle && (targetArticle.rendered_body || targetArticle.body_html) && (
             <button
               onClick={() => { setIsPreview(true); setShowArticleBody(true); }}
-              className={`text-[10px] px-3 py-1 rounded transition-all ${isPreview && showArticleBody ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+              className={clsx(styles.modeBtn.base, isPreview && showArticleBody ? styles.modeBtn.article : styles.modeBtn.inactive)}
             >
               ARTICLE
             </button>
@@ -204,9 +241,10 @@ export default function MemoEditor({
           <button 
             onClick={handleSave}
             disabled={!targetArticle || isSaving || isSaved}
-            className={`text-white text-xs px-3 py-1.5 rounded-sm transition-all font-medium tracking-wide flex items-center gap-1.5 ${
-              isSaved ? 'bg-green-600' : isSaving ? 'bg-indigo-600' : 'bg-emerald-600 hover:bg-emerald-500'
-            } disabled:opacity-70 cursor-default`}
+            className={clsx(
+              styles.saveBtn.base,
+              isSaved ? styles.saveBtn.saved : isSaving ? styles.saveBtn.saving : styles.saveBtn.default
+            )}
           >
             {isSaving && (
               <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -240,17 +278,17 @@ export default function MemoEditor({
 
       {!isPreview && (
         <div className="flex gap-1 px-4 py-2 border-b border-slate-800 bg-slate-900/50 flex-wrap">
-          <button onClick={() => insertMarkdown('# ', '')} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors" title="見出し">H</button>
-          <button onClick={() => insertMarkdown('**', '**')} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors font-bold" title="太字">B</button>
-          <button onClick={() => insertMarkdown('*', '*')} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors italic" title="斜体">I</button>
-          <button onClick={() => insertMarkdown('- ')} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors" title="リスト">• リスト</button>
-          <button onClick={() => insertMarkdown('- [ ] ')} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors" title="チェックリスト">☑ 項目</button>
-          <button onClick={() => insertMarkdown('`', '`')} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors font-mono" title="インラインコード">&lt;&gt;</button>
-          <button onClick={() => insertMarkdown('[', '](URL)')} className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors" title="リンク">🔗</button>
+          <button onClick={() => insertMarkdown('# ', '')} className={styles.toolbarBtn} title="見出し">H</button>
+          <button onClick={() => insertMarkdown('**', '**')} className={clsx(styles.toolbarBtn, 'font-bold')} title="太字">B</button>
+          <button onClick={() => insertMarkdown('*', '*')} className={clsx(styles.toolbarBtn, 'italic')} title="斜体">I</button>
+          <button onClick={() => insertMarkdown('- ')} className={styles.toolbarBtn} title="リスト">• リスト</button>
+          <button onClick={() => insertMarkdown('- [ ] ')} className={styles.toolbarBtn} title="チェックリスト">☑ 項目</button>
+          <button onClick={() => insertMarkdown('`', '`')} className={clsx(styles.toolbarBtn, 'font-mono')} title="インラインコード">&lt;&gt;</button>
+          <button onClick={() => insertMarkdown('[', '](URL)')} className={styles.toolbarBtn} title="リンク">🔗</button>
           <div className="flex-1" />
           <button 
             onClick={() => insertMarkdown('\n```\n', '\n```\n')} 
-            className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors" 
+            className={styles.toolbarBtn} 
             title="コードブロック"
           >
             &lt;/&gt;
@@ -275,24 +313,7 @@ export default function MemoEditor({
                 dangerouslySetInnerHTML={{ 
                   __html: targetArticle.rendered_body || targetArticle.body_html || ''
                 }} 
-                className="prose prose-invert max-w-none
-                  prose-p:text-slate-300 prose-p:mb-3
-                  prose-headings:text-slate-100 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
-                  prose-strong:text-slate-200 prose-strong:font-bold
-                  prose-em:text-slate-300 prose-em:italic
-                  prose-code:text-amber-300 prose-code:bg-slate-800 prose-code:px-2 prose-code:py-1 prose-code:rounded
-                  prose-pre:bg-slate-800 prose-pre:text-slate-300 prose-pre:p-4 prose-pre:rounded prose-pre:overflow-x-auto
-                  prose-blockquote:text-slate-400 prose-blockquote:border-l-4 prose-blockquote:border-slate-600 prose-blockquote:pl-4 prose-blockquote:italic
-                  prose-a:text-indigo-400 prose-a:hover:text-indigo-300 prose-a:underline
-                  prose-img:rounded prose-img:shadow-lg
-                  prose-li:text-slate-300
-                  prose-table:border prose-table:border-slate-700
-                  prose-thead:bg-slate-800
-                  prose-th:border prose-th:border-slate-700 prose-th:text-slate-200 prose-th:p-2
-                  prose-td:border prose-td:border-slate-700 prose-td:p-2
-                  [&_blockquote]:border-l-4 [&_blockquote]:border-indigo-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-400
-                  [&_iframe]:w-full [&_iframe]:rounded [&_iframe]:mt-4 [&_iframe]:mb-4
-                "
+                className={styles.proseArticle}
               />
             </div>
           </div>

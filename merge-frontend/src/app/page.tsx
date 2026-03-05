@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from "react";
+import clsx from "clsx";
 import ArticleView from "../components/ArticleView";
 import MemoEditor from "../components/MemoEditor";
 import ArticleContent from "../components/ArticleContent";
@@ -9,6 +10,26 @@ import GraphView from "../components/GraphView";
 import { getArticleSource, getBadgeClasses, getSourceLabel } from "../lib/articleHelpers";
 import { ArticleTab, HistoryEntry } from "../types/article";
 import { API_BASE } from "../lib/api";
+
+const styles = {
+  tab: {
+    base: "group flex items-center gap-2 px-3 py-2.5 border-r border-slate-800 cursor-pointer transition-all min-w-0 max-w-xs",
+    active: "bg-[#0B1120] text-indigo-400",
+    splitView: "bg-purple-900/30 text-purple-300",
+    inactive: "bg-slate-900/50 text-slate-400 hover:bg-slate-800/70 hover:text-slate-300",
+  },
+  viewModeBtn: {
+    base: "text-[10px] px-3 py-1 rounded transition-all",
+    active: "bg-indigo-600 text-white shadow",
+    inactive: "text-slate-400 hover:text-slate-200",
+  },
+  splitBtn: {
+    active: "p-0.5 rounded transition-colors flex-shrink-0 bg-purple-600/50 text-purple-200",
+    inactive: "p-0.5 rounded transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100 hover:bg-slate-700/50",
+  },
+  closeBtn: "p-0.5 rounded hover:bg-slate-700/50 transition-colors flex-shrink-0",
+  resizer: "w-1 bg-slate-700 hover:bg-indigo-500 transition-colors cursor-col-resize",
+};
 
 const MAX_TABS = 5;
 const MAX_HISTORY = 50;
@@ -225,7 +246,7 @@ export default function Home() {
     <div className="app-shell flex h-screen w-full bg-[#0B1120] text-slate-300 font-sans selection:bg-indigo-500/30" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
       
       {/* Left Sidebar */}
-      <aside className={`transition-all duration-300 flex-shrink-0 flex flex-col border-r border-slate-800 bg-[#0F172A] ${sidebarOpen ? 'w-80' : 'w-0 overflow-hidden'}`}>
+      <aside className={clsx('transition-all duration-300 flex-shrink-0 flex flex-col border-r border-slate-800 bg-[#0F172A]', sidebarOpen ? 'w-80' : 'w-0 overflow-hidden')}>
         <div className="h-14 flex items-center justify-between px-5 border-b border-slate-800">
           <h1 className="text-lg font-mono font-bold text-indigo-400">
             <span className="text-slate-500 mr-2">$</span>Merge_
@@ -269,21 +290,21 @@ export default function Home() {
            <div className="ml-auto flex gap-1 bg-slate-800/50 p-1 rounded">
              <button
                onClick={() => { setViewMode('normal'); setSplitViewTabs(null); }}
-               className={`text-[10px] px-3 py-1 rounded transition-all ${viewMode === 'normal' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+               className={clsx(styles.viewModeBtn.base, viewMode === 'normal' ? styles.viewModeBtn.active : styles.viewModeBtn.inactive)}
                title="通常表示"
              >
                📄
              </button>
              <button
                onClick={() => setViewMode('history')}
-               className={`text-[10px] px-3 py-1 rounded transition-all ${viewMode === 'history' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+               className={clsx(styles.viewModeBtn.base, viewMode === 'history' ? styles.viewModeBtn.active : styles.viewModeBtn.inactive)}
                title="履歴"
              >
                🕐
              </button>
              <button
                onClick={() => setViewMode('graph')}
-               className={`text-[10px] px-3 py-1 rounded transition-all ${viewMode === 'graph' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+               className={clsx(styles.viewModeBtn.base, viewMode === 'graph' ? styles.viewModeBtn.active : styles.viewModeBtn.inactive)}
                title="グラフビュー"
              >
                🕸️
@@ -302,13 +323,12 @@ export default function Home() {
                 <div
                   key={tab.id}
                   onClick={() => handleTabClick(tab.id)}
-                  className={`group flex items-center gap-2 px-3 py-2.5 border-r border-slate-800 cursor-pointer transition-all min-w-0 max-w-xs ${
-                    activeTabId === tab.id
-                      ? 'bg-[#0B1120] text-indigo-400'
-                      : isInSplitView
-                      ? 'bg-purple-900/30 text-purple-300'
-                      : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800/70 hover:text-slate-300'
-                  }`}
+                  className={clsx(
+                    styles.tab.base,
+                    activeTabId === tab.id ? styles.tab.active
+                    : isInSplitView        ? styles.tab.splitView
+                    :                        styles.tab.inactive
+                  )}
                 >
                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase border flex-shrink-0 ${getBadgeClasses(source)}`}>
                     {badgeLabel}
@@ -318,9 +338,7 @@ export default function Home() {
                   </span>
                   <button
                     onClick={(e) => toggleSplitView(tab.id, e)}
-                    className={`p-0.5 rounded transition-colors flex-shrink-0 ${
-                      isInSplitView ? 'bg-purple-600/50 text-purple-200' : 'opacity-0 group-hover:opacity-100 hover:bg-slate-700/50'
-                    }`}
+                    className={isInSplitView ? styles.splitBtn.active : styles.splitBtn.inactive}
                     title="比較モード"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,9 +347,7 @@ export default function Home() {
                   </button>
                   <button
                     onClick={(e) => handleCloseTab(tab.id, e)}
-                    className={`p-0.5 rounded hover:bg-slate-700/50 transition-colors flex-shrink-0 ${
-                      activeTabId === tab.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    }`}
+                    className={clsx(styles.closeBtn, activeTabId === tab.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -375,7 +391,7 @@ export default function Home() {
 
           <div 
             onMouseDown={handleMouseDown}
-            className={`w-1 bg-slate-700 hover:bg-indigo-500 transition-colors cursor-col-resize ${isResizing ? 'bg-indigo-500' : ''}`}
+            className={clsx(styles.resizer, isResizing && 'bg-indigo-500')}
           />
           <aside style={{ width: memoWidth }} className="flex-shrink-0 flex flex-col border-l border-slate-800 bg-[#0F172A] z-20 hidden lg:flex overflow-hidden">
             <MemoEditor targetArticle={selectedArticle} onArticleSaved={handleArticleSaved} />

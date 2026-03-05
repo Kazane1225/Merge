@@ -1,9 +1,16 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from "react";
+import clsx from 'clsx';
 import { getArticleSource } from "../lib/articleHelpers";
 import { ArticleTab, HistoryEntry } from "../types/article";
 import { API_BASE } from '../lib/api';
+
+const styles = {
+  tagChip: "text-xs px-2 py-1 bg-indigo-900/50 text-indigo-200 border border-indigo-700/50 rounded-full",
+  edgeKeyword: "text-xs px-2 py-0.5 bg-indigo-900/50 text-indigo-200 border border-indigo-700/50 rounded",
+  edgeTooltip: "absolute bg-slate-900/95 backdrop-blur border border-indigo-500/50 rounded-lg p-3 pointer-events-none shadow-xl",
+};
 
 interface GraphViewProps {
   tabs: ArticleTab[];
@@ -343,7 +350,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
   };
 
   return (
-    <div className={`${className} bg-[#0B1120] flex flex-col`}>
+    <div className={clsx(className, 'bg-[#0B1120] flex flex-col')}>
       <div className="px-8 py-6 border-b border-slate-800">
         <h2 className="text-3xl font-bold text-slate-100 flex items-center gap-3">
           <span>🕸️</span>
@@ -378,7 +385,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
             ref={svgRef}
             width={dimensions.width}
             height={dimensions.height}
-            className={`w-full h-full ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={clsx('w-full h-full', isPanning ? 'cursor-grabbing' : 'cursor-grab')}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -579,7 +586,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
 
             return (
               <div
-                className="absolute bg-slate-900/95 backdrop-blur border border-indigo-500/50 rounded-lg p-3 pointer-events-none shadow-xl"
+                className={styles.edgeTooltip}
                 style={{
                   left: `${midX}px`,
                   top: `${midY}px`,
@@ -595,7 +602,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
                   {edge.keywords.map((kw, i) => (
                     <span
                       key={i}
-                      className="text-xs px-2 py-0.5 bg-indigo-900/50 text-indigo-200 border border-indigo-700/50 rounded"
+                      className={styles.edgeKeyword}
                     >
                       {kw}
                     </span>
@@ -619,7 +626,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
                 {interests.map(({ word, count }) => (
                   <span
                     key={word}
-                    className="text-xs px-2 py-1 bg-indigo-900/50 text-indigo-200 border border-indigo-700/50 rounded-full"
+                    className={styles.tagChip}
                   >
                     {word}
                     <span className="ml-1 text-indigo-400 text-[10px]">×{count}</span>
