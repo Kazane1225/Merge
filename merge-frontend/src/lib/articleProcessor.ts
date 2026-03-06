@@ -20,6 +20,14 @@ const decodeHtmlEntities = (value: string): string => {
 export function processArticleHtml(rawHtml: string): { html: string; toc: TocItem[] } {
   let html = rawHtml;
 
+  // 絵文字imgにインラインスタイルを付与（Tailwindの[&_img]スタイルを上書き）
+  html = html.replace(
+    /<img([^>]*class="[^"]*emoji[^"]*"[^>]*)>/gi,
+    (_match: string, attrs: string) => {
+      return `<img${attrs} style="display:inline;vertical-align:middle;margin:0 2px;border:none;border-radius:0;box-shadow:none;width:1.2em;height:1.2em;">`;
+    }
+  );
+
   // QiitaのTwitter埋め込みiframeをblockquoteに変換
   html = html.replace(
     /<iframe[^>]*id="([^"]*)"[^>]*src="https:\/\/qiita\.com\/embed-contents\/tweet[^"]*"[^>]*data-content="([^"]*)"[^>]*>[\s\S]*?<\/iframe>/gi,

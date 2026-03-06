@@ -33,6 +33,7 @@ public class QiitaServiceImpl implements QiitaService {
     private final RestTemplate restTemplate;
     private final Clock clock;
     private final String QIITA_API_URL = "https://qiita.com/api/v2/items";
+    private final String QIITA_USER_API_URL = "https://qiita.com/api/v2/users";
 
     public QiitaServiceImpl(RestTemplate restTemplate, Clock clock) {
         this.restTemplate = restTemplate;
@@ -276,6 +277,23 @@ public class QiitaServiceImpl implements QiitaService {
             return Arrays.asList(comments != null ? comments : new QiitaCommentItem[0]);
         } catch (Exception e) {
             log.error("[Qiita] getArticleComments error: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public List<QiitaItem> getUserArticles(String userId) {
+        String url = QIITA_USER_API_URL + "/" + userId + "/items?per_page=100";
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            if (qiitaAccessToken != null && !qiitaAccessToken.isEmpty()) {
+                headers.set("Authorization", "Bearer " + qiitaAccessToken);
+            }
+            ResponseEntity<QiitaItem[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), QiitaItem[].class);
+            QiitaItem[] items = response.getBody();
+            return new ArrayList<>(Arrays.asList(items != null ? items : new QiitaItem[0]));
+        } catch (Exception e) {
+            log.error("[Qiita] getUserArticles error: {}", e.getMessage());
             return Collections.emptyList();
         }
     }

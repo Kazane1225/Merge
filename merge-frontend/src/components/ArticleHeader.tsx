@@ -17,20 +17,22 @@ export default function ArticleHeader({ article }: ArticleHeaderProps) {
 
   if (article.cover_image || article.coverImage) {
     return (
-      <div className="relative mb-10 rounded-xl overflow-hidden shadow-2xl">
-        <div className="relative">
-          <img
-            src={article.cover_image || article.coverImage}
-            alt={article.title}
-            className="w-full h-auto object-cover max-h-[500px]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] via-[#0B1120]/70 to-transparent" />
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-8">
-          <span className={badgeClass}>{sourceBadge}</span>
-          <h1 className="text-4xl lg:text-5xl font-bold text-white mb-3 drop-shadow-lg">
-            {article.title}
-          </h1>
+      <div className="mb-10">
+        <div className="relative rounded-xl overflow-hidden shadow-2xl">
+          <div className="relative">
+            <img
+              src={article.cover_image || article.coverImage}
+              alt={article.title}
+              className="w-full h-auto object-cover max-h-[500px]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] via-[#0B1120]/70 to-transparent" />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-8">
+            <span className={badgeClass}>{sourceBadge}</span>
+            <h1 className="text-4xl lg:text-5xl font-bold text-white mb-3 drop-shadow-lg">
+              {article.title}
+            </h1>
+          </div>
         </div>
       </div>
     );

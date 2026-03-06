@@ -43,4 +43,9 @@ public class QiitaController {
     public List<QiitaCommentItem> getArticleComments(@PathVariable String id) {
         return qiitaService.getArticleComments(id);
     }
+
+    @GetMapping("/user/{userId}/articles")
+    public List<QiitaItem> getUserArticles(@PathVariable String userId) {
+        return qiitaService.getUserArticles(userId);
+    }
 }

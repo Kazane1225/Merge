@@ -5,12 +5,13 @@ import type { Article, QiitaTag } from '../types/article';
 interface ArticleMetaProps {
   article: Article;
   readingTime: number;
+  onViewUserArticles?: (article: Article) => void;
 }
 
 /**
  * 記事の公開日・いいね数・閲覧数・読了時間・著者・タグを表示するコンポーネント。
  */
-export default function ArticleMeta({ article, readingTime }: ArticleMetaProps) {
+export default function ArticleMeta({ article, readingTime, onViewUserArticles }: ArticleMetaProps) {
   return (
     <div className="mb-8 p-6 bg-slate-900/50 border border-slate-800 rounded-xl">
       <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
@@ -64,14 +65,26 @@ export default function ArticleMeta({ article, readingTime }: ArticleMetaProps) 
 
         {/* 著者 */}
         {(article.user?.name || article.user?.login || article.user?.username) && (
-          <div className="flex items-center gap-2 ml-auto">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="font-medium text-slate-300">
+          <button
+            onClick={() => onViewUserArticles?.(article)}
+            className="flex items-center gap-2 ml-auto group/author"
+            title={onViewUserArticles ? `@${article.user?.id ?? article.user?.login ?? ''} の記事一覧` : undefined}
+          >
+            {article.user?.profile_image_url ? (
+              <img
+                src={article.user.profile_image_url}
+                alt={article.user.name ?? article.user.login ?? ''}
+                className="w-6 h-6 rounded-full border border-slate-700 group-hover/author:border-indigo-500 transition-colors"
+              />
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            )}
+            <span className="font-medium text-slate-300 group-hover/author:text-indigo-300 transition-colors">
               {article.user?.name || article.user?.login || article.user?.username}
             </span>
-          </div>
+          </button>
         )}
       </div>
 

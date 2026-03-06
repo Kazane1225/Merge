@@ -8,6 +8,9 @@ interface UseArticleHtmlResult {
   readingTime: number;
 }
 
+// 処理済みHTMLのキャッシュ（記事IDをキーに）
+const htmlCache = new Map<string, { html: string; toc: TocItem[] }>();
+
 /**
  * 記事HTMLの前処理・状態管理・Twitter埋め込み・リンク外部開きを担うフック。
  * contentRef はリンク外部開き処理でDOM参照に使用する。
@@ -19,12 +22,18 @@ export function useArticleHtml(
   const [processedHtml, setProcessedHtml] = useState('');
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
 
-  // 記事が変わったらHTML前処理 → state更新
+  // 記事が変わったらHTML前処理 → state更新（キャッシュ済みなら即返す）
   useEffect(() => {
     if (article && (article.rendered_body || article.body_html)) {
-      const { html, toc } = processArticleHtml(article.rendered_body || article.body_html || '');
-      setProcessedHtml(html);
-      setTocItems(toc);
+      const rawHtml = article.rendered_body || article.body_html || '';
+      const cacheKey = String(article.id || article.url || rawHtml.slice(0, 64));
+      let result = htmlCache.get(cacheKey);
+      if (!result) {
+        result = processArticleHtml(rawHtml);
+        htmlCache.set(cacheKey, result);
+      }
+      setProcessedHtml(result.html);
+      setTocItems(result.toc);
       if (contentRef.current) {
         contentRef.current.scrollTop = 0;
       }

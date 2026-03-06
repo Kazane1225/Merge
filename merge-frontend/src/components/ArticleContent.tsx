@@ -11,13 +11,16 @@ import ArticleMeta from './ArticleMeta';
 import ArticleComments from './ArticleComments';
 import TableOfContents from './TableOfContents';
 import ArticleBody from './ArticleBody';
+import { API_BASE } from '../lib/api';
 
 interface ArticleContentProps {
   article: Article | null;
   className?: string;
+  onViewUserArticles?: (article: Article) => void;
+  onSelectArticle?: (article: Article) => void;
 }
 
-const ArticleContent = React.memo(function ArticleContent({ article, className }: ArticleContentProps) {
+const ArticleContent = React.memo(function ArticleContent({ article, className, onViewUserArticles, onSelectArticle }: ArticleContentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const tocNavRef = useRef<HTMLElement>(null);
@@ -86,6 +89,30 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
     });
   };
 
+  // 本文内のQiitaリンクをアプリ内で開く
+  useEffect(() => {
+    if (!contentRef.current || !processedHtml || !onSelectArticle) return;
+    const container = contentRef.current;
+    const qiitaItemRe = /https:\/\/qiita\.com\/[^/]+\/items\/([a-f0-9]+)/;
+
+    const handleLinkClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest('a');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href') ?? '';
+      const match = href.match(qiitaItemRe);
+      if (!match) return;
+      e.preventDefault();
+      const itemId = match[1];
+      fetch(`${API_BASE}/qiita/article/${itemId}`)
+        .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+        .then(data => onSelectArticle(data))
+        .catch(() => window.open(href, '_blank', 'noopener,noreferrer'));
+    };
+
+    container.addEventListener('click', handleLinkClick);
+    return () => container.removeEventListener('click', handleLinkClick);
+  }, [processedHtml, onSelectArticle]);
+
   const scrollToHeading = (id: string) => {
     if (!contentRef.current) return;
     const heading = contentRef.current.querySelector(`#${id}`);
@@ -115,11 +142,11 @@ const ArticleContent = React.memo(function ArticleContent({ article, className }
       <div className="flex min-h-full">
         {/* メインコンテンツ */}
         <div className="flex-1 flex justify-center">
-          <div className="w-full max-w-4xl px-6 lg:px-8 py-8">
+          <div className="w-full max-w-5xl px-6 lg:px-8 py-8">
             {article ? (
               <div className="w-full">
                 <ArticleHeader article={article} />
-                <ArticleMeta article={article} readingTime={readingTime} />
+                <ArticleMeta article={article} readingTime={readingTime} onViewUserArticles={onViewUserArticles} />
 
                 <a
                   href={article.url}

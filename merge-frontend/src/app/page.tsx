@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import clsx from "clsx";
 import ArticleView from "../components/ArticleView";
+import type { ArticleViewHandle } from "../components/ArticleView";
 import MemoEditor from "../components/MemoEditor";
 import ArticleContent from "../components/ArticleContent";
 import HistoryView from "../components/HistoryView";
@@ -41,6 +42,7 @@ export default function Home() {
   const [memoWidth, setMemoWidth] = useState(450);
   const [isResizing, setIsResizing] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const articleViewRef = useRef<ArticleViewHandle>(null);
   
   // Split View (比較モード)
   const [splitViewTabs, setSplitViewTabs] = useState<[string, string] | null>(null);
@@ -136,6 +138,38 @@ export default function Home() {
 
     // ビューモードを通常表示に切り替え
     setViewMode('normal');
+  };
+
+  const handleViewUserArticles = (article: Article) => {
+    const userId = article.user?.id ?? article.user?.login;
+    if (!userId) return;
+    const name = article.user?.name ?? article.user?.login ?? userId;
+    const profileImage = article.user?.profile_image_url ?? '';
+    setSidebarOpen(true);
+    articleViewRef.current?.viewUserArticles(userId, name, profileImage);
+  };
+
+  // 本文内リンク用: アクティブタブを切り替えずに新タブで開く
+  const handleOpenInNewTab = (article: Article) => {
+    const articleId = String(article.id || article.url || Math.random());
+    // 既存タブがあれば遷移のみ
+    if (tabs.find(tab => tab.id === articleId)) {
+      setTabs(prev => prev.map(tab =>
+        tab.id === articleId ? { ...tab, lastViewed: Date.now() } : tab
+      ));
+      setActiveTabId(articleId);
+      return;
+    }
+    const newTab: ArticleTab = { id: articleId, article, lastViewed: Date.now() };
+    addToHistory(article, articleId);
+    if (tabs.length >= MAX_TABS) {
+      const oldest = tabs.reduce((a, b) => b.lastViewed < a.lastViewed ? b : a);
+      setTabs(prev => [...prev.filter(t => t.id !== oldest.id), newTab]);
+    } else {
+      setTabs(prev => [...prev, newTab]);
+    }
+    // activeTabId を新タブに切り替える
+    setActiveTabId(articleId);
   };
 
   const handleArticleSaved = (savedArticle: Article) => {
@@ -262,7 +296,7 @@ export default function Home() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <ArticleView onSelectArticle={handleSelectArticle} />
+          <ArticleView ref={articleViewRef} onSelectArticle={handleSelectArticle} />
         </div>
       </aside>
 
@@ -368,16 +402,20 @@ export default function Home() {
                 <ArticleContent 
                   article={tabs.find(t => t.id === splitViewTabs[0])?.article ?? null} 
                   className="flex-1"
+                  onViewUserArticles={handleViewUserArticles}
+                  onSelectArticle={handleOpenInNewTab}
                 />
                 <div className="w-1 bg-indigo-500/50" />
                 <ArticleContent 
                   article={tabs.find(t => t.id === splitViewTabs[1])?.article ?? null}
                   className="flex-1"
+                  onViewUserArticles={handleViewUserArticles}
+                  onSelectArticle={handleOpenInNewTab}
                 />
               </>
             ) : (
               // 通常モード
-              <ArticleContent article={selectedArticle} className="flex-1" />
+              <ArticleContent article={selectedArticle} className="flex-1" onViewUserArticles={handleViewUserArticles} onSelectArticle={handleOpenInNewTab} />
             )
           )}
           

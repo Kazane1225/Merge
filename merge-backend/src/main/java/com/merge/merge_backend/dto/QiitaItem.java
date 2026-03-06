@@ -27,4 +27,6 @@ public class QiitaItem {
 
     @JsonProperty("qiita-comments")
     private List<QiitaCommentItem> qiitaComments;
+
+    private QiitaUserItem user;
 }

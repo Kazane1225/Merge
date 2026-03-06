@@ -13,7 +13,7 @@
 <span class="p">-</span> 集中して実行するために、サブエージェント1つにつき1タスクを割り当てる
 
 <span class="gu">### 3. 自己改善ループ</span>
-<span class="p">-</span> ユーザーから修正を受けたら必ず <span class="sb">`.tasks/lessons.md`</span> にそのパターンを記録する
+<span class="p">-</span> ユーザーから修正を受けたら必ず <span class="sb">`tasks/lessons.md`</span> にそのパターンを記録する
 <span class="p">-</span> 同じミスを繰り返さないように、自分へのルールを書く
 <span class="p">-</span> ミス率が下がるまで、ルールを徹底的に改善し続ける
 <span class="p">-</span> セッション開始時に、そのプロジェクトに関連するlessonsをレビューする
@@ -40,12 +40,12 @@
 </span>
 <span class="gu">## タスク管理</span>
 <span class="p">
-1.</span> <span class="gs">**まず計画を立てる**</span>：チェック可能な項目として <span class="sb">`.tasks/todo.md`</span> に計画を書く
+1.</span> <span class="gs">**まず計画を立てる**</span>：チェック可能な項目として <span class="sb">`tasks/todo.md`</span> に計画を書く
 <span class="p">2.</span> <span class="gs">**計画を確認する**</span>：実装を開始する前に確認する
 <span class="p">3.</span> <span class="gs">**進捗を記録する**</span>：完了した項目を随時マークしていく
 <span class="p">4.</span> <span class="gs">**変更を説明する**</span>：各ステップで高レベルのサマリーを提供する
-<span class="p">5.</span> <span class="gs">**結果をドキュメント化する**</span>：<span class="sb">`.tasks/todo.md`</span> にレビューセクションを追加する
-<span class="p">6.</span> <span class="gs">**学びを記録する**</span>：修正を受けた後に <span class="sb">`.tasks/lessons.md`</span> を更新する
+<span class="p">5.</span> <span class="gs">**結果をドキュメント化する**</span>：<span class="sb">`tasks/todo.md`</span> にレビューセクションを追加する
+<span class="p">6.</span> <span class="gs">**学びを記録する**</span>：修正を受けた後に <span class="sb">`tasks/lessons.md`</span> を更新する
 <span class="p">
 ---
 </span>

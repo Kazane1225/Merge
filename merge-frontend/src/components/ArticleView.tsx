@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useImperativeHandle } from 'react';
 import clsx from 'clsx';
 import type { Article } from '../types/article';
 import { API_BASE } from '../lib/api';
@@ -26,7 +26,12 @@ const styles = {
   },
 };
 
-export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: Article) => void }) {
+export interface ArticleViewHandle {
+  viewUserArticles: (userId: string, name: string, profileImage: string) => void;
+}
+
+const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: Article) => void }>(
+  function ArticleView({ onSelectArticle }, ref) {
   const [activeMain, setActiveMain] = useState<'database' | 'qiita' | 'dev'>('database');
   const [activeSub, setActiveSub] = useState<'search' | 'trending' | 'timeline'>('search');
   const [articles, setArticles] = useState<Article[]>([]);
@@ -35,6 +40,11 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
   const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month'>('all');
   const [loading, setLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const articlesRef = useRef<Article[]>([]);
+
+  useEffect(() => {
+    articlesRef.current = articles;
+  }, [articles]);
 
   const handleSort = (v: typeof sort) => {
     setSort(v);
@@ -119,6 +129,35 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       .finally(() => setLoading(false));
   };
 
+  // ── ユーザー記事ビュー ───────────────────────────────────────
+  const [userView, setUserView] = useState<{ userId: string; name: string; profileImage: string } | null>(null);
+  const [savedArticles, setSavedArticles] = useState<Article[]>([]);
+
+  const viewUserArticles = (userId: string, name: string, profileImage: string) => {
+    setSavedArticles(articlesRef.current);
+    setUserView({ userId, name, profileImage });
+    setLoading(true);
+    setArticles([]);
+    fetch(`${API_BASE}/qiita/user/${encodeURIComponent(userId)}/articles`)
+      .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+      .then(data => {
+        const arr: Article[] = Array.isArray(data) ? data : [];
+        arr.sort((a, b) => (b.likes_count ?? 0) - (a.likes_count ?? 0));
+        setArticles(arr);
+      })
+      .catch(() => setArticles([]))
+      .finally(() => setLoading(false));
+  };
+
+  useImperativeHandle(ref, () => ({ viewUserArticles }), []);
+
+
+  const exitUserView = () => {
+    setArticles(savedArticles);
+    setSavedArticles([]);
+    setUserView(null);
+  };
+
   const handleDelete = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     if (!confirm('この記事を削除しますか？')) return;
@@ -182,7 +221,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       </div>
 
       {/* サブタブ */}
-      {(activeMain === 'qiita' || activeMain === 'dev') && (
+      {(activeMain === 'qiita' || activeMain === 'dev') && !userView && (
         <div className="flex border-b border-slate-800 bg-slate-800/30 px-4">
           {['search', 'trending', 'timeline'].map(sub => (
             <button
@@ -197,7 +236,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       )}
 
       {/* 検索フォーム */}
-      {showSearch && (
+      {showSearch && !userView && (
         <div className="border-b border-slate-800 bg-slate-900/30">
           <div className="p-3 space-y-2">
             <div className="flex gap-2">
@@ -249,7 +288,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       )}
 
       {/* トレンドフィルター */}
-      {showTrendingFilter && (
+      {showTrendingFilter && !userView && (
         <div className="border-b border-slate-800 bg-slate-900/30 p-3">
           <div className="space-y-2">
             <select
@@ -276,7 +315,7 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       )}
 
       {/* Timeline用Goボタン */}
-      {showSimpleGo && (
+      {showSimpleGo && !userView && (
         <div className="border-b border-slate-800 bg-slate-900/30 p-3">
           <button
             onClick={() => fetchArticles()}
@@ -285,6 +324,32 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
           >
             {loading ? <Spinner /> : 'Go'}
           </button>
+        </div>
+      )}
+
+      {/* ユーザー記事ビューヘッダー */}
+      {userView && (
+        <div className="flex items-center gap-3 px-3 py-2.5 border-b border-slate-800 bg-slate-900/60">
+          <button
+            onClick={exitUserView}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-indigo-300 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            戻る
+          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            {userView.profileImage ? (
+              <img src={userView.profileImage} alt={userView.name} className="w-6 h-6 rounded-full border border-slate-700" />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-indigo-800/60 border border-slate-700 flex items-center justify-center">
+                <span className="text-[10px] text-indigo-200 font-bold">{userView.name[0]?.toUpperCase()}</span>
+              </div>
+            )}
+            <span className="text-xs font-semibold text-slate-200 truncate">@{userView.userId} の記事</span>
+            {!loading && <span className="text-[10px] text-slate-500 flex-shrink-0">{articles.length}件</span>}
+          </div>
         </div>
       )}
 
@@ -310,7 +375,10 @@ export default function ArticleView({ onSelectArticle }: { onSelectArticle: (a: 
       </div>
     </div>
   );
-}
+  }
+);
+
+export default ArticleView;
 
 const Spinner = () => (
   <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
