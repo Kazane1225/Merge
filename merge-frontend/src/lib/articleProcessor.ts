@@ -103,7 +103,10 @@ export function processArticleHtml(rawHtml: string): { html: string; toc: TocIte
       const normalizedLanguage = languageClass
         ? languageClass.replace(/^language-/, '').replace(/^lang-/, '').toLowerCase()
         : undefined;
-      const decodedCode = decodeHtmlEntities(codeContent);
+      // Qiitaのrendered_bodyはすでにハイライト済みHTMLスパンを含む場合があるため、
+      // 既存のHTMLタグを取り除いてから再ハイライトする
+      const strippedCode = codeContent.replace(/<[^>]*>/g, '');
+      const decodedCode = decodeHtmlEntities(strippedCode);
       try {
         const highlighted =
           normalizedLanguage && hljs.getLanguage(normalizedLanguage)

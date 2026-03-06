@@ -98,6 +98,8 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     const handleLinkClick = (e: MouseEvent) => {
       const anchor = (e.target as HTMLElement).closest('a');
       if (!anchor) return;
+      // target="_blank" のリンク（ヘッダーURLなど）は通常通り外部遷移させる
+      if (anchor.target === '_blank') return;
       const href = anchor.getAttribute('href') ?? '';
       const match = href.match(qiitaItemRe);
       if (!match) return;
