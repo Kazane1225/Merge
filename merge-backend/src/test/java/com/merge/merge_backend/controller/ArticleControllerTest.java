@@ -2,6 +2,7 @@ package com.merge.merge_backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.merge.merge_backend.entity.Article;
+import com.merge.merge_backend.repository.ArticleRepository;
 import com.merge.merge_backend.service.ArticleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ class ArticleControllerTest {
 
     @Mock
     private ArticleService articleService;
+
+    @Mock
+    private ArticleRepository articleRepository;
 
     @InjectMocks
     private ArticleController articleController;
@@ -152,6 +156,29 @@ class ArticleControllerTest {
                 .andExpect(status().isOk());
 
         verify(articleService).deleteArticle(1000L);
+    }
+
+    // --- getArticleByUrl ---
+
+    @Test
+    void getArticleByUrl_withExistingUrl_returns200WithArticle() throws Exception {
+        Article a = article(5L, "Saved Article", "https://saved.com");
+        when(articleRepository.findByUrl("https://saved.com")).thenReturn(a);
+
+        mockMvc.perform(get("/api/articles/by-url")
+                        .param("url", "https://saved.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(5L))
+                .andExpect(jsonPath("$.title").value("Saved Article"));
+    }
+
+    @Test
+    void getArticleByUrl_withNonExistentUrl_returns404() throws Exception {
+        when(articleRepository.findByUrl("https://missing.com")).thenReturn(null);
+
+        mockMvc.perform(get("/api/articles/by-url")
+                        .param("url", "https://missing.com"))
+                .andExpect(status().isNotFound());
     }
 
     // --- helper ---

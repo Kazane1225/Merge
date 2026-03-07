@@ -23,6 +23,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -298,5 +299,103 @@ class QiitaServiceImplTest {
         QiitaItem i = item(id, createdAt);
         i.setLikesCount(likesCount);
         return i;
+    }
+
+    // --- getHotArticles ---
+
+    @Test
+    void getHotArticles_noArg_returnsSortedByLikesDescending() {
+        QiitaItem low  = item("low",  TODAY + "T00:00:00+09:00", 5);
+        QiitaItem high = item("high", TODAY + "T00:00:00+09:00", 999);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(QiitaItem[].class)))
+                .thenReturn(ResponseEntity.ok(new QiitaItem[]{low, high}))
+                .thenReturn(ResponseEntity.ok(new QiitaItem[0]));
+
+        List<QiitaItem> result = service.getHotArticles();
+
+        assertThat(result.get(0).getLikesCount()).isEqualTo(999);
+        assertThat(result.get(1).getLikesCount()).isEqualTo(5);
+    }
+
+    @Test
+    void getHotArticles_withPeriodOnCacheMiss_fetchesAndReturnsSortedByLikes() {
+        QiitaItem high = item("h1", TODAY + "T00:00:00+09:00", 200);
+        QiitaItem low  = item("l1", TODAY + "T00:00:00+09:00", 50);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(QiitaItem[].class)))
+                .thenReturn(ResponseEntity.ok(new QiitaItem[]{high, low}))
+                .thenReturn(ResponseEntity.ok(new QiitaItem[0]));
+
+        List<QiitaItem> result = service.getHotArticles("1day");
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getLikesCount()).isEqualTo(200);
+        assertThat(result.get(1).getLikesCount()).isEqualTo(50);
+    }
+
+    @Test
+    void getHotArticles_onCacheHit_doesNotCallApiAgain() {
+        QiitaItem a = item("a1", TODAY + "T00:00:00+09:00", 10);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(QiitaItem[].class)))
+                .thenReturn(ResponseEntity.ok(new QiitaItem[]{a}))
+                .thenReturn(ResponseEntity.ok(new QiitaItem[0]));
+
+        service.getHotArticles("month"); // first call: populates cache
+
+        // lenient guard: if cache is bypassed this would be called and corrupt results
+        lenient().when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(QiitaItem[].class)))
+                .thenThrow(new RuntimeException("should not be called"));
+
+        List<QiitaItem> cached = service.getHotArticles("month"); // second call: cache hit
+
+        assertThat(cached).hasSize(1);
+        assertThat(cached.get(0).getId()).isEqualTo("a1");
+    }
+
+    // --- getTimelineArticles ---
+
+    @Test
+    void getTimelineArticles_returnsItemsFromApi() {
+        QiitaItem a = item("tl1", TODAY + "T00:00:00+09:00");
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(QiitaItem[].class)))
+                .thenReturn(ResponseEntity.ok(new QiitaItem[]{a}));
+
+        List<QiitaItem> result = service.getTimelineArticles();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo("tl1");
+    }
+
+    @Test
+    void getTimelineArticles_onError_returnsEmptyList() {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(QiitaItem[].class)))
+                .thenThrow(new RuntimeException("API error"));
+
+        List<QiitaItem> result = service.getTimelineArticles();
+
+        assertThat(result).isEmpty();
+    }
+
+    // --- getUserArticles ---
+
+    @Test
+    void getUserArticles_returnsItemsFromApi() {
+        QiitaItem a = item("u1", TODAY + "T00:00:00+09:00");
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(QiitaItem[].class)))
+                .thenReturn(ResponseEntity.ok(new QiitaItem[]{a}));
+
+        List<QiitaItem> result = service.getUserArticles("someuser");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo("u1");
+    }
+
+    @Test
+    void getUserArticles_onError_returnsEmptyList() {
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(QiitaItem[].class)))
+                .thenThrow(new RuntimeException("API error"));
+
+        List<QiitaItem> result = service.getUserArticles("baduser");
+
+        assertThat(result).isEmpty();
     }
 }

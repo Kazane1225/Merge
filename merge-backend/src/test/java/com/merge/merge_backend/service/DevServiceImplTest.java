@@ -18,6 +18,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -36,6 +37,37 @@ class DevServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new DevServiceImpl(restTemplate);
+    }
+
+    // --- keyword (tag param) ---
+
+    @Test
+    void searchArticles_withSingleKeyword_uriContainsExactTag() throws Exception {
+        ArgumentCaptor<URI> cap = uriCaptor();
+
+        service.searchArticles("java", "rel", "all");
+
+        assertThat(cap.getValue().getQuery()).contains("tag=java");
+    }
+
+    @Test
+    void searchArticles_withMultipleKeywords_uriContainsOnlyFirstTag() throws Exception {
+        ArgumentCaptor<URI> cap = uriCaptor();
+
+        service.searchArticles("java spring", "rel", "all");
+
+        assertThat(cap.getValue().getQuery()).contains("tag=java");
+        assertThat(cap.getValue().getQuery()).doesNotContain("spring");
+    }
+
+    @Test
+    void searchArticles_withMultipleKeywordsLeadingSpaces_uriContainsFirstNonEmptyTag() throws Exception {
+        ArgumentCaptor<URI> cap = uriCaptor();
+
+        service.searchArticles("  kotlin  coroutines", "rel", "all");
+
+        assertThat(cap.getValue().getQuery()).contains("tag=kotlin");
+        assertThat(cap.getValue().getQuery()).doesNotContain("coroutines");
     }
 
     // --- convertPeriodToDays (verified via top param in URI) ---
@@ -237,5 +269,78 @@ class DevServiceImplTest {
         item.setId(id);
         item.setLikesCount(likesCount);
         return item;
+    }
+
+    // --- getHotArticles ---
+
+    @Test
+    void getHotArticles_noArg_delegatesToWeekPeriodAndReturnsItems() {
+        // week: minReactions=5, item with 10 >= 5 → included
+        DevItem a = devItem("a1", 10);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
+                .thenReturn(ResponseEntity.ok(new DevItem[]{a}))
+                .thenReturn(ResponseEntity.ok(new DevItem[0]));
+
+        List<DevItem> result = service.getHotArticles();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo("a1");
+    }
+
+    @Test
+    void getHotArticles_withPeriodOnCacheMiss_fetchesAndReturnsSortedByLikes() {
+        // 1day: minReactions=0, pages=1
+        DevItem high = devItem("h1", 200);
+        DevItem low  = devItem("l1", 10);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
+                .thenReturn(ResponseEntity.ok(new DevItem[]{high, low}));
+
+        List<DevItem> result = service.getHotArticles("1day");
+
+        assertThat(result.get(0).getLikesCount()).isEqualTo(200);
+        assertThat(result.get(1).getLikesCount()).isEqualTo(10);
+    }
+
+    @Test
+    void getHotArticles_onCacheHit_doesNotCallApiAgain() {
+        // 1day: minReactions=0, pages=1
+        DevItem a = devItem("a1", 10);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
+                .thenReturn(ResponseEntity.ok(new DevItem[]{a}));
+
+        service.getHotArticles("1day"); // first call: populates cache
+
+        // lenient guard: if cache is bypassed this would be called and corrupt results
+        lenient().when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
+                .thenThrow(new RuntimeException("should not be called"));
+
+        List<DevItem> cached = service.getHotArticles("1day"); // second call: cache hit
+
+        assertThat(cached).hasSize(1);
+        assertThat(cached.get(0).getId()).isEqualTo("a1");
+    }
+
+    // --- getTimelineArticles ---
+
+    @Test
+    void getTimelineArticles_returnsItemsFromApi() {
+        DevItem a = devItem("tl1", 50);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
+                .thenReturn(ResponseEntity.ok(new DevItem[]{a}));
+
+        List<DevItem> result = service.getTimelineArticles();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo("tl1");
+    }
+
+    @Test
+    void getTimelineArticles_onError_returnsEmptyList() {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
+                .thenThrow(new RuntimeException("API error"));
+
+        List<DevItem> result = service.getTimelineArticles();
+
+        assertThat(result).isEmpty();
     }
 }

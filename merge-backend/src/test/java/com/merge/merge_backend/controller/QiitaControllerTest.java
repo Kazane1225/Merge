@@ -187,6 +187,30 @@ class QiitaControllerTest {
                 .andExpect(jsonPath("$").isEmpty());
     }
 
+    // ─── GET /api/qiita/user/{userId}/articles ────────────────────
+
+    @Test
+    void getUserArticles_withUserId_returnsUserArticles() throws Exception {
+        QiitaItem item = qiitaItem("user-article-1", "My Article");
+        when(qiitaService.getUserArticles("john")).thenReturn(List.of(item));
+
+        mockMvc.perform(get("/api/qiita/user/john/articles"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("user-article-1"))
+                .andExpect(jsonPath("$[0].title").value("My Article"));
+
+        verify(qiitaService).getUserArticles("john");
+    }
+
+    @Test
+    void getUserArticles_returnsEmptyListWhenUserHasNoArticles() throws Exception {
+        when(qiitaService.getUserArticles("emptyuser")).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/qiita/user/emptyuser/articles"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
     // ─── ヘルパー ─────────────────────────────────────────────────
 
     private QiitaItem qiitaItem(String id, String title) {

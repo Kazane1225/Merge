@@ -1,6 +1,8 @@
 package com.merge.merge_backend.service;
 
 import com.merge.merge_backend.entity.Article;
+import com.merge.merge_backend.entity.CommentDev;
+import com.merge.merge_backend.entity.CommentQiita;
 import com.merge.merge_backend.repository.ArticleRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -157,6 +159,34 @@ class ArticleServiceImplTest {
         Article result = articleService.createArticle(input);
 
         assertThat(result.getId()).isEqualTo(10L);
+        verify(articleRepository).save(input);
+    }
+
+    @Test
+    void createArticle_withQiitaComments_linksCommentsToArticle() {
+        CommentQiita c = new CommentQiita();
+        Article input = article(null, "Qiita Article", null);
+        input.setComments(new ArrayList<>(List.of(c)));
+        Article saved = article(1L, "Qiita Article", LocalDateTime.now());
+        when(articleRepository.save(input)).thenReturn(saved);
+
+        articleService.createArticle(input);
+
+        assertThat(c.getArticle()).isSameAs(input);
+        verify(articleRepository).save(input);
+    }
+
+    @Test
+    void createArticle_withDevComments_linksDevCommentsToArticle() {
+        CommentDev c = new CommentDev();
+        Article input = article(null, "Dev Article", null);
+        input.setDevComments(new ArrayList<>(List.of(c)));
+        Article saved = article(2L, "Dev Article", LocalDateTime.now());
+        when(articleRepository.save(input)).thenReturn(saved);
+
+        articleService.createArticle(input);
+
+        assertThat(c.getArticle()).isSameAs(input);
         verify(articleRepository).save(input);
     }
 
