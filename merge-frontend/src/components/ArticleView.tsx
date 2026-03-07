@@ -187,15 +187,6 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
     resetState();
   }, [activeMain, activeSub]);
 
-  // 検索モード時、sort や period が変更されたら自動で再検索
-  useEffect(() => {
-    if (showSearch && keyword && !loading) {
-      // 短い遅延を入れて state の更新を完了させる
-      const timer = setTimeout(() => fetchArticles(), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [sort, period, showSearch]);
-
   // cleanup: コンポーネント アンマウント時に pending requests をキャンセル
   useEffect(() => {
     return () => {
@@ -239,6 +230,11 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
       {showSearch && !userView && (
         <div className="border-b border-slate-800 bg-slate-900/30">
           <div className="p-3 space-y-2">
+            {activeMain === 'dev' && keyword.trim().includes(' ') && (
+              <p className="text-[11px] text-amber-400/80 px-1">
+                ⚠ Dev.to の検索は単一キーワードのみ対応しています。先頭の「{keyword.trim().split(/\s+/)[0]}」で検索します。
+              </p>
+            )}
             <div className="flex gap-2">
               <input
                 type="text"

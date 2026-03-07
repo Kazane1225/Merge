@@ -106,7 +106,11 @@ public class DevServiceImpl implements DevService {
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
                     .queryParam("per_page", 100)
                     .queryParam("page", page);
-            if (keyword != null && !keyword.isBlank()) builder.queryParam("tag", keyword);
+            if (keyword != null && !keyword.isBlank()) {
+                // Dev.to tag param は単一タグのみ対応。複数指定時は先頭のみ使用
+                String firstTag = keyword.trim().split("\\s+")[0];
+                builder.queryParam("tag", firstTag);
+            }
             if (days != null) builder.queryParam("top", days);
             List<DevItem> items = fetchFromDev(builder.build().toUri());
             if (items.isEmpty()) break;
