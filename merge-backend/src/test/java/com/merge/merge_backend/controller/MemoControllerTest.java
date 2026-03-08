@@ -45,9 +45,12 @@ class MemoControllerTest {
 
     @Test
     void getAllMemos_returnsListFromRepository() throws Exception {
+        // データ作成
         Memo m = memo(1L, "Test memo");
+        // モック化
         when(memoRepository.findAll()).thenReturn(List.of(m));
 
+        // 実行
         mockMvc.perform(get("/api/memos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1L))
@@ -56,8 +59,10 @@ class MemoControllerTest {
 
     @Test
     void getAllMemos_returnsEmptyListWhenNoMemos() throws Exception {
+        // モック化
         when(memoRepository.findAll()).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/memos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
@@ -68,23 +73,29 @@ class MemoControllerTest {
 
     @Test
     void getMemosByArticle_returnsMemosByArticleId() throws Exception {
+        // データ作成
         Memo m = memo(2L, "Article memo");
+        // モック化
         when(memoRepository.findByArticleIdAndDeleteFlgFalseOrderByCreatedAtDesc(10L))
                 .thenReturn(List.of(m));
 
+        // 実行
         mockMvc.perform(get("/api/article/10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(2L))
                 .andExpect(jsonPath("$[0].content").value("Article memo"));
 
+        // 呼び出し検証
         verify(memoRepository).findByArticleIdAndDeleteFlgFalseOrderByCreatedAtDesc(10L);
     }
 
     @Test
     void getMemosByArticle_returnsEmptyListWhenNoMemos() throws Exception {
+        // モック化
         when(memoRepository.findByArticleIdAndDeleteFlgFalseOrderByCreatedAtDesc(99L))
                 .thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/article/99"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
@@ -94,12 +105,15 @@ class MemoControllerTest {
 
     @Test
     void getMemosByUrl_withExistingArticle_returnsMemos() throws Exception {
+        // データ作成
         Article article = article(5L, "https://example.com");
         Memo m = memo(3L, "URL memo");
+        // モック化
         when(articleRepository.findByUrl("https://example.com")).thenReturn(article);
         when(memoRepository.findByArticleIdAndDeleteFlgFalseOrderByCreatedAtDesc(5L))
                 .thenReturn(List.of(m));
 
+        // 実行
         mockMvc.perform(get("/api/memos/search")
                         .param("url", "https://example.com"))
                 .andExpect(status().isOk())
@@ -108,13 +122,16 @@ class MemoControllerTest {
 
     @Test
     void getMemosByUrl_withNonExistentArticle_returnsEmptyList() throws Exception {
+        // モック化
         when(articleRepository.findByUrl("https://unknown.com")).thenReturn(null);
 
+        // 実行
         mockMvc.perform(get("/api/memos/search")
                         .param("url", "https://unknown.com"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
 
+        // 呼び出し検証
         verifyNoInteractions(memoRepository);
     }
 
@@ -124,9 +141,12 @@ class MemoControllerTest {
 
     @Test
     void createMemo_withNoArticle_savesMemoDirectly() throws Exception {
+        // データ作成
         Memo savedMemo = memo(22L, "standalone memo");
+        // モック化
         when(memoRepository.save(any(Memo.class))).thenReturn(savedMemo);
 
+        // 実行
         mockMvc.perform(post("/api/memos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"standalone memo\"}"))
@@ -134,15 +154,19 @@ class MemoControllerTest {
                 .andExpect(jsonPath("$.id").value(22L))
                 .andExpect(jsonPath("$.content").value("standalone memo"));
 
+        // 呼び出し検証
         verifyNoInteractions(articleRepository);
         verify(memoRepository).save(any(Memo.class));
     }
 
     @Test
     void createMemo_returnsPersistedMemoWithId() throws Exception {
+        // データ作成
         Memo savedMemo = memo(30L, "persisted memo");
+        // モック化
         when(memoRepository.save(any(Memo.class))).thenReturn(savedMemo);
 
+        // 実行
         mockMvc.perform(post("/api/memos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"persisted memo\"}"))

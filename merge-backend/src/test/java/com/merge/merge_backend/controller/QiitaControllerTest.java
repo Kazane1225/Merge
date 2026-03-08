@@ -39,48 +39,61 @@ class QiitaControllerTest {
 
     @Test
     void searchArticles_withKeyword_delegatesToService() throws Exception {
+        // データ作成
         QiitaItem item = qiitaItem("abc", "Spring Boot入門");
+        // モック化
         when(qiitaService.searchArticles("spring", "rel", "all")).thenReturn(List.of(item));
 
+        // 実行
         mockMvc.perform(get("/api/qiita/search")
                         .param("keyword", "spring"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("abc"))
                 .andExpect(jsonPath("$[0].title").value("Spring Boot入門"));
 
+        // 呼び出し検証
         verify(qiitaService).searchArticles("spring", "rel", "all");
     }
 
     @Test
     void searchArticles_withDefaultSortAndPeriod_usesDefaults() throws Exception {
+        // モック化
         when(qiitaService.searchArticles("java", "rel", "all")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/qiita/search")
                         .param("keyword", "java"))
                 .andExpect(status().isOk());
 
+        // 呼び出し検証
         verify(qiitaService).searchArticles("java", "rel", "all");
     }
 
     @Test
     void searchArticles_withSortCount_passesAllParams() throws Exception {
+        // モック化
         when(qiitaService.searchArticles("kotlin", "count", "week")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/qiita/search")
                         .param("keyword", "kotlin")
                         .param("sort", "count")
                         .param("period", "week"))
                 .andExpect(status().isOk());
 
+        // 呼び出し検証
         verify(qiitaService).searchArticles("kotlin", "count", "week");
     }
 
     @Test
     void searchArticles_returnsLikesCount() throws Exception {
+        // データ作成
         QiitaItem item = qiitaItem("x1", "人気記事");
         item.setLikesCount(500);
+        // モック化
         when(qiitaService.searchArticles("java", "rel", "all")).thenReturn(List.of(item));
 
+        // 実行
         mockMvc.perform(get("/api/qiita/search")
                         .param("keyword", "java"))
                 .andExpect(status().isOk())
@@ -91,24 +104,31 @@ class QiitaControllerTest {
 
     @Test
     void getHotArticles_withDefaultPeriod_returnsItems() throws Exception {
+        // データ作成
         QiitaItem item = qiitaItem("hot1", "ホット記事");
+        // モック化
         when(qiitaService.getHotArticles("all")).thenReturn(List.of(item));
 
+        // 実行
         mockMvc.perform(get("/api/qiita/hot"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("ホット記事"));
 
+        // 呼び出し検証
         verify(qiitaService).getHotArticles("all");
     }
 
     @Test
     void getHotArticles_withPeriodMonth_passesCorrectPeriod() throws Exception {
+        // モック化
         when(qiitaService.getHotArticles("month")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/qiita/hot")
                         .param("period", "month"))
                 .andExpect(status().isOk());
 
+        // 呼び出し検証
         verify(qiitaService).getHotArticles("month");
     }
 
@@ -116,20 +136,26 @@ class QiitaControllerTest {
 
     @Test
     void getTimelineArticles_returnsLatestItems() throws Exception {
+        // データ作成
         QiitaItem item = qiitaItem("tl1", "タイムライン記事");
+        // モック化
         when(qiitaService.getTimelineArticles()).thenReturn(List.of(item));
 
+        // 実行
         mockMvc.perform(get("/api/qiita/timeline"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("タイムライン記事"));
 
+        // 呼び出し検証
         verify(qiitaService).getTimelineArticles();
     }
 
     @Test
     void getTimelineArticles_returnsEmptyListWhenNoArticles() throws Exception {
+        // モック化
         when(qiitaService.getTimelineArticles()).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/qiita/timeline"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
@@ -152,10 +178,13 @@ class QiitaControllerTest {
 
     @Test
     void getArticleDetail_withCreatedAt_serializedCorrectly() throws Exception {
+        // データ作成
         QiitaItem item = qiitaItem("id1", "Date Test");
         item.setCreatedAt("2026-01-15T10:00:00+09:00");
+        // モック化
         when(qiitaService.getArticleDetail("id1")).thenReturn(item);
 
+        // 実行
         mockMvc.perform(get("/api/qiita/article/id1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.created_at").value("2026-01-15T10:00:00+09:00"));
@@ -165,23 +194,29 @@ class QiitaControllerTest {
 
     @Test
     void getArticleComments_returnsCommentList() throws Exception {
+        // データ作成
         QiitaCommentItem comment = new QiitaCommentItem();
         comment.setId("c1");
         comment.setBody("参考になりました！");
+        // モック化
         when(qiitaService.getArticleComments("qiita-123")).thenReturn(List.of(comment));
 
+        // 実行
         mockMvc.perform(get("/api/qiita/article/qiita-123/comments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("c1"))
                 .andExpect(jsonPath("$[0].body").value("参考になりました！"));
 
+        // 呼び出し検証
         verify(qiitaService).getArticleComments("qiita-123");
     }
 
     @Test
     void getArticleComments_returnsEmptyListWhenNoComments() throws Exception {
+        // モック化
         when(qiitaService.getArticleComments("no-comments")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/qiita/article/no-comments/comments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
@@ -191,21 +226,27 @@ class QiitaControllerTest {
 
     @Test
     void getUserArticles_withUserId_returnsUserArticles() throws Exception {
+        // データ作成
         QiitaItem item = qiitaItem("user-article-1", "My Article");
+        // モック化
         when(qiitaService.getUserArticles("john")).thenReturn(List.of(item));
 
+        // 実行
         mockMvc.perform(get("/api/qiita/user/john/articles"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("user-article-1"))
                 .andExpect(jsonPath("$[0].title").value("My Article"));
 
+        // 呼び出し検証
         verify(qiitaService).getUserArticles("john");
     }
 
     @Test
     void getUserArticles_returnsEmptyListWhenUserHasNoArticles() throws Exception {
+        // モック化
         when(qiitaService.getUserArticles("emptyuser")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/qiita/user/emptyuser/articles"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());

@@ -39,46 +39,58 @@ class DevControllerTest {
 
     @Test
     void searchArticles_withKeyword_delegatesToService() throws Exception {
+        // データ作成
         DevItem item = devItem("1", "Java testing guide");
+        // モック化
         when(devService.searchArticles("java", "rel", "all")).thenReturn(List.of(item));
 
+        // 実行
         mockMvc.perform(get("/api/dev/search")
                         .param("keyword", "java"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("1"))
                 .andExpect(jsonPath("$[0].title").value("Java testing guide"));
 
+        // 呼び出し検証
         verify(devService).searchArticles("java", "rel", "all");
     }
 
     @Test
     void searchArticles_withDefaultSortAndPeriod_usesDefaults() throws Exception {
+        // モック化
         when(devService.searchArticles("spring", "rel", "all")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/dev/search")
                         .param("keyword", "spring"))
                 .andExpect(status().isOk());
 
+        // 呼び出し検証
         verify(devService).searchArticles("spring", "rel", "all");
     }
 
     @Test
     void searchArticles_withSortCount_passesCorrectParams() throws Exception {
+        // モック化
         when(devService.searchArticles("react", "count", "month")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/dev/search")
                         .param("keyword", "react")
                         .param("sort", "count")
                         .param("period", "month"))
                 .andExpect(status().isOk());
 
+        // 呼び出し検証
         verify(devService).searchArticles("react", "count", "month");
     }
 
     @Test
     void searchArticles_returnsEmptyListWhenNoResults() throws Exception {
+        // モック化
         when(devService.searchArticles("noresult", "rel", "all")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/dev/search")
                         .param("keyword", "noresult"))
                 .andExpect(status().isOk())
@@ -89,24 +101,31 @@ class DevControllerTest {
 
     @Test
     void getHotArticles_withDefaultPeriod_returnsItems() throws Exception {
+        // データ作成
         DevItem item = devItem("2", "Hot Dev Article");
+        // モック化
         when(devService.getHotArticles("all")).thenReturn(List.of(item));
 
+        // 実行
         mockMvc.perform(get("/api/dev/hot"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("Hot Dev Article"));
 
+        // 呼び出し検証
         verify(devService).getHotArticles("all");
     }
 
     @Test
     void getHotArticles_withPeriodWeek_passesCorrectPeriod() throws Exception {
+        // モック化
         when(devService.getHotArticles("week")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/dev/hot")
                         .param("period", "week"))
                 .andExpect(status().isOk());
 
+        // 呼び出し検証
         verify(devService).getHotArticles("week");
     }
 
@@ -114,20 +133,26 @@ class DevControllerTest {
 
     @Test
     void getTimelineArticles_returnsLatestItems() throws Exception {
+        // データ作成
         DevItem item = devItem("3", "Timeline Article");
+        // モック化
         when(devService.getTimelineArticles()).thenReturn(List.of(item));
 
+        // 実行
         mockMvc.perform(get("/api/dev/timeline"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("Timeline Article"));
 
+        // 呼び出し検証
         verify(devService).getTimelineArticles();
     }
 
     @Test
     void getTimelineArticles_returnsEmptyListWhenNoArticles() throws Exception {
+        // モック化
         when(devService.getTimelineArticles()).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/dev/timeline"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
@@ -137,22 +162,29 @@ class DevControllerTest {
 
     @Test
     void getArticleDetail_returnsItemById() throws Exception {
+        // データ作成
         DevItem item = devItem("42", "Detail Article");
+        // モック化
         when(devService.getArticleDetail("42")).thenReturn(item);
 
+        // 実行
         mockMvc.perform(get("/api/dev/article/42"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("42"))
                 .andExpect(jsonPath("$.title").value("Detail Article"));
 
+        // 呼び出し検証
         verify(devService).getArticleDetail("42");
     }
 
     @Test
     void getArticleDetail_withStringId_passesIdCorrectly() throws Exception {
+        // データ作成
         DevItem item = devItem("abc-123", "Slug Article");
+        // モック化
         when(devService.getArticleDetail("abc-123")).thenReturn(item);
 
+        // 実行
         mockMvc.perform(get("/api/dev/article/abc-123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("abc-123"));
@@ -162,23 +194,29 @@ class DevControllerTest {
 
     @Test
     void getArticleComments_returnsCommentList() throws Exception {
+        // データ作成
         DevCommentItem comment = new DevCommentItem();
         comment.setId("c1");
         comment.setBody("Great article!");
+        // モック化
         when(devService.getArticleComments("42")).thenReturn(List.of(comment));
 
+        // 実行
         mockMvc.perform(get("/api/dev/article/42/comments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("c1"))
                 .andExpect(jsonPath("$[0].body").value("Great article!"));
 
+        // 呼び出し検証
         verify(devService).getArticleComments("42");
     }
 
     @Test
     void getArticleComments_returnsEmptyListWhenNoComments() throws Exception {
+        // モック化
         when(devService.getArticleComments("99")).thenReturn(Collections.emptyList());
 
+        // 実行
         mockMvc.perform(get("/api/dev/article/99/comments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
