@@ -7,7 +7,7 @@ import type { ArticleViewHandle } from '../article/ArticleView';
 import type { Article } from '../../types/article';
 
 export interface SidebarHandle {
-  viewUserArticles: (userId: string, name: string, profileImage: string) => void;
+  viewUserArticles: (userId: string, name: string, profileImage: string, source: 'qiita' | 'dev') => void;
 }
 
 interface SidebarProps {
@@ -23,8 +23,8 @@ const Sidebar = React.forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
   const articleViewRef = useRef<ArticleViewHandle>(null);
 
   useImperativeHandle(ref, () => ({
-    viewUserArticles(userId, name, profileImage) {
-      articleViewRef.current?.viewUserArticles(userId, name, profileImage);
+    viewUserArticles(userId, name, profileImage, source) {
+      articleViewRef.current?.viewUserArticles(userId, name, profileImage, source);
     },
   }));
 

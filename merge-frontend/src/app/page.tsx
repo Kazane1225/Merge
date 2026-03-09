@@ -40,12 +40,16 @@ export default function Home() {
   };
 
   const handleViewUserArticles = (article: Article) => {
-    const userId = article.user?.id ?? article.user?.login;
+    const source: 'qiita' | 'dev' = article.url?.includes('dev.to') ? 'dev' : 'qiita';
+    // Qiita: userId = login ID, Dev.to: userId = username (handle)
+    const userId = source === 'dev'
+      ? (article.user?.username ?? article.user?.id ?? '')
+      : (article.user?.id ?? article.user?.login ?? '');
     if (!userId) return;
-    const name = article.user?.name ?? article.user?.login ?? userId;
-    const profileImage = article.user?.profile_image_url ?? '';
+    const name = article.user?.name ?? userId;
+    const profileImage = article.user?.profile_image_url ?? article.user?.profile_image ?? '';
     setSidebarOpen(true);
-    sidebarRef.current?.viewUserArticles(userId, name, profileImage);
+    sidebarRef.current?.viewUserArticles(userId, name, profileImage, source);
   };
 
   return (

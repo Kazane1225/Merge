@@ -274,7 +274,9 @@ public class QiitaServiceImpl implements QiitaService {
             }
             ResponseEntity<QiitaCommentItem[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), QiitaCommentItem[].class);
             QiitaCommentItem[] comments = response.getBody();
-            return Arrays.asList(comments != null ? comments : new QiitaCommentItem[0]);
+            return Arrays.stream(comments != null ? comments : new QiitaCommentItem[0])
+                    .filter(c -> c.getId() != null)
+                    .collect(java.util.stream.Collectors.toList());
         } catch (Exception e) {
             log.error("[Qiita] getArticleComments error: {}", e.getMessage());
             return Collections.emptyList();

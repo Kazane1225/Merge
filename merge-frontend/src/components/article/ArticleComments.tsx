@@ -188,7 +188,7 @@ export default function ArticleComments({ source, articleId, comments, commentsL
       ) : (
         <div className="space-y-1">
           {source === 'qiita'
-            ? (comments as QiitaComment[]).map((c) => <QiitaCommentItem key={c.id} comment={c} />)
+            ? (comments as QiitaComment[]).map((c, idx) => <QiitaCommentItem key={c.id ?? `qiita-${idx}`} comment={c} />)
             : (comments as DevComment[]).map((c, idx) => <DevCommentItem key={c.id_code ?? `dev-${idx}`} comment={c} />)
           }
         </div>

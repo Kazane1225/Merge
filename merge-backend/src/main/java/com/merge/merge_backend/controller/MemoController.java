@@ -61,9 +61,22 @@ public class MemoController {
                 if (article.getCoverImage() != null) {
                     existingArticle.setCoverImage(article.getCoverImage());
                 }
+                if (article.getUserId() != null || article.getUserLogin() != null) {
+                    existingArticle.setUserId(article.getUserId());
+                    existingArticle.setUserLogin(article.getUserLogin());
+                    existingArticle.setUserName(article.getUserName());
+                    existingArticle.setUserProfileImageUrl(article.getUserProfileImageUrl());
+                }
                 article = articleRepository.save(existingArticle);
             } else {
-                article = articleRepository.save(article);
+                Article newArticle = article;
+                if (newArticle.getComments() != null) {
+                    newArticle.getComments().forEach(comment -> comment.setArticle(newArticle));
+                }
+                if (newArticle.getDevComments() != null) {
+                    newArticle.getDevComments().forEach(comment -> comment.setArticle(newArticle));
+                }
+                article = articleRepository.save(newArticle);
             }
             
             memo.setArticle(article);

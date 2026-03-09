@@ -27,7 +27,7 @@ const styles = {
 };
 
 export interface ArticleViewHandle {
-  viewUserArticles: (userId: string, name: string, profileImage: string) => void;
+  viewUserArticles: (userId: string, name: string, profileImage: string, source: 'qiita' | 'dev') => void;
 }
 
 const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: Article) => void }>(
@@ -133,12 +133,14 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
   const [userView, setUserView] = useState<{ userId: string; name: string; profileImage: string } | null>(null);
   const [savedArticles, setSavedArticles] = useState<Article[]>([]);
 
-  const viewUserArticles = (userId: string, name: string, profileImage: string) => {
+  const viewUserArticles = React.useCallback((userId: string, name: string, profileImage: string, source: 'qiita' | 'dev') => {
     setSavedArticles(articlesRef.current);
     setUserView({ userId, name, profileImage });
+    setActiveMain(source);
     setLoading(true);
     setArticles([]);
-    fetch(`${API_BASE}/qiita/user/${encodeURIComponent(userId)}/articles`)
+    if (source === 'qiita') {
+      fetch(`${API_BASE}/qiita/user/${encodeURIComponent(userId)}/articles`)
       .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
       .then(data => {
         const arr: Article[] = Array.isArray(data) ? data : [];
@@ -147,9 +149,20 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
       })
       .catch(() => setArticles([]))
       .finally(() => setLoading(false));
-  };
+    } else {
+      fetch(`${API_BASE}/dev/user/${encodeURIComponent(userId)}/articles`)
+      .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+      .then(data => {
+        const arr: Article[] = Array.isArray(data) ? data : [];
+        arr.sort((a, b) => (b.likes_count ?? b.positive_reactions_count ?? 0) - (a.likes_count ?? a.positive_reactions_count ?? 0));
+        setArticles(arr);
+      })
+      .catch(() => setArticles([]))
+      .finally(() => setLoading(false));
+    }
+  }, []);
 
-  useImperativeHandle(ref, () => ({ viewUserArticles }), []);
+  useImperativeHandle(ref, () => ({ viewUserArticles }), [viewUserArticles]);
 
 
   const exitUserView = () => {

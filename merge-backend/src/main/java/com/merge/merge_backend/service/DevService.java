@@ -11,4 +11,5 @@ public interface DevService {
     List<DevItem> getTimelineArticles();
     DevItem getArticleDetail(String itemId);
     List<DevCommentItem> getArticleComments(String itemId);
+    List<DevItem> getUserArticles(String username);
 }

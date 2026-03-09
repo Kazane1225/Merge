@@ -43,4 +43,9 @@ public class DevController {
     public List<DevCommentItem> getArticleComments(@PathVariable String id) {
         return devService.getArticleComments(id);
     }
+
+    @GetMapping("/user/{username}/articles")
+    public List<DevItem> getUserArticles(@PathVariable String username) {
+        return devService.getUserArticles(username);
+    }
 }

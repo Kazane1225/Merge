@@ -166,6 +166,18 @@ public class DevServiceImpl implements DevService {
         }
     }
 
+    @Override
+    public List<DevItem> getUserArticles(String username) {
+        try {
+            String url = BASE_URL + "?username=" + username + "&per_page=100";
+            ResponseEntity<DevItem[]> response = restTemplate.exchange(url, HttpMethod.GET, createEntity(), DevItem[].class);
+            DevItem[] items = response.getBody();
+            return Arrays.asList(items != null ? items : new DevItem[0]);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
     // ── 内部処理 ──────────────────────────────────────────────────
     private List<DevItem> fetchAndCache(String period) {
         PeriodConfig cfg = PERIOD_CONFIG.getOrDefault(period, PERIOD_CONFIG.get("week"));

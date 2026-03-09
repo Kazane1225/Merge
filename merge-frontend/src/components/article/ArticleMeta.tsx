@@ -64,16 +64,16 @@ export default function ArticleMeta({ article, readingTime, onViewUserArticles }
         )}
 
         {/* 著者 */}
-        {(article.user?.name || article.user?.login || article.user?.username) && (
+        {(article.user?.name || article.user?.login || article.user?.username || article.user?.id) && (
           <button
             onClick={() => onViewUserArticles?.(article)}
             className="flex items-center gap-2 ml-auto group/author"
-            title={onViewUserArticles ? `@${article.user?.id ?? article.user?.login ?? ''} の記事一覧` : undefined}
+            title={onViewUserArticles ? `@${article.user?.username ?? article.user?.id ?? article.user?.login ?? ''} の記事一覧` : undefined}
           >
-            {article.user?.profile_image_url ? (
+            {(article.user?.profile_image_url || article.user?.profile_image) ? (
               <img
-                src={article.user.profile_image_url}
-                alt={article.user.name ?? article.user.login ?? ''}
+                src={article.user.profile_image_url ?? article.user.profile_image}
+                alt={article.user.name ?? article.user.login ?? article.user.username ?? ''}
                 className="w-6 h-6 rounded-full border border-slate-700 group-hover/author:border-indigo-500 transition-colors"
               />
             ) : (
@@ -82,7 +82,7 @@ export default function ArticleMeta({ article, readingTime, onViewUserArticles }
               </svg>
             )}
             <span className="font-medium text-slate-300 group-hover/author:text-indigo-300 transition-colors">
-              {article.user?.name || article.user?.login || article.user?.username}
+              {article.user?.name || article.user?.login || article.user?.username || article.user?.id}
             </span>
           </button>
         )}
