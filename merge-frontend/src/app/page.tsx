@@ -13,6 +13,7 @@ import { fetchArticleDetail } from "../lib/articleApi";
 import { useHistory } from "../hooks/useHistory";
 import { useTabManager } from "../hooks/useTabManager";
 import { useResizer } from "../hooks/useResizer";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 type ViewMode = 'normal' | 'history' | 'graph';
 
@@ -83,17 +84,19 @@ export default function Home() {
         )}
 
         <div className="flex-1 overflow-hidden flex min-w-0">
-          <MainContentSwitcher
-            viewMode={viewMode}
-            tabs={tabs}
-            splitViewTabs={splitViewTabs}
-            selectedArticle={selectedArticle}
-            history={history}
-            onViewUserArticles={handleViewUserArticles}
-            onSelectArticle={openTab}
-            onHistorySelect={handleSelectArticle}
-            setViewMode={setViewMode}
-          />
+          <ErrorBoundary>
+            <MainContentSwitcher
+              viewMode={viewMode}
+              tabs={tabs}
+              splitViewTabs={splitViewTabs}
+              selectedArticle={selectedArticle}
+              history={history}
+              onViewUserArticles={handleViewUserArticles}
+              onSelectArticle={openTab}
+              onHistorySelect={handleSelectArticle}
+              setViewMode={setViewMode}
+            />
+          </ErrorBoundary>
 
           <MemoPane
             selectedArticle={selectedArticle}

@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useRef, useImperativeHandle } from 'react';
 import clsx from 'clsx';
-import type { Article } from '../types/article';
-import { API_BASE } from '../lib/api';
+import type { Article } from '../../types/article';
+import { API_BASE } from '../../lib/api';
 
 const styles = {
   mainTab: {

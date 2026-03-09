@@ -2,8 +2,8 @@
 
 import React, { useRef, useImperativeHandle } from 'react';
 import clsx from 'clsx';
-import ArticleView from '../ArticleView';
-import type { ArticleViewHandle } from '../ArticleView';
+import ArticleView from '../article/ArticleView';
+import type { ArticleViewHandle } from '../article/ArticleView';
 import type { Article } from '../../types/article';
 
 export interface SidebarHandle {

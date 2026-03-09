@@ -2,7 +2,7 @@
 
 import { RefObject } from 'react';
 import clsx from 'clsx';
-import { TocItem } from '../lib/articleProcessor';
+import { TocItem } from '../../lib/articleProcessor';
 
 interface TableOfContentsProps {
   tocItems: TocItem[];

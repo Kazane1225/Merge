@@ -1,6 +1,6 @@
 'use client';
 
-import type { Article, QiitaTag } from '../types/article';
+import type { Article, QiitaTag } from '../../types/article';
 
 interface ArticleMetaProps {
   article: Article;

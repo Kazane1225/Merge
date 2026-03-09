@@ -85,10 +85,10 @@ export function processArticleHtml(rawHtml: string): { html: string; toc: TocIte
     }
   );
 
-  // YouTubeサムネイル画像を高解像度版に置き換え
+  // YouTubeサムネイル画像を高解像度版に置き換え（onerrorはdata属性で後からアタッチ）
   html = html.replace(
     /src="https:\/\/(?:img|i)\.youtube\.com\/vi\/([^/]+)\/(?:default|mqdefault|sddefault|hqdefault|maxresdefault)\.(?:jpg|webp)"/gi,
-    'src="https://i.ytimg.com/vi/$1/maxresdefault.jpg" loading="lazy" decoding="async" onerror="this.onerror=null;const id=\'$1\';const sizes=[\'sddefault\',\'hqdefault\'];let idx=0;const tryNext=()=>{if(idx<sizes.length){this.src=`https://i.ytimg.com/vi/${id}/${sizes[idx]}.jpg`;idx++;}};this.onerror=tryNext;"'
+    'src="https://i.ytimg.com/vi/$1/maxresdefault.jpg" loading="lazy" decoding="async" data-yt-id="$1"'
   );
 
   // シンタックスハイライト

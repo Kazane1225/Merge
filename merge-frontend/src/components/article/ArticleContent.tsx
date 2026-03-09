@@ -2,16 +2,16 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import type { Article } from '../types/article';
-import { getArticleSource } from '../lib/articleHelpers';
-import { useArticleHtml } from '../hooks/useArticleHtml';
-import { useArticleComments } from '../hooks/useArticleComments';
+import type { Article } from '../../types/article';
+import { getArticleSource } from '../../lib/articleHelpers';
+import { useArticleHtml } from '../../hooks/useArticleHtml';
+import { useArticleComments } from '../../hooks/useArticleComments';
 import ArticleHeader from './ArticleHeader';
 import ArticleMeta from './ArticleMeta';
 import ArticleComments from './ArticleComments';
 import TableOfContents from './TableOfContents';
 import ArticleBody from './ArticleBody';
-import { API_BASE } from '../lib/api';
+import { API_BASE } from '../../lib/api';
 
 interface ArticleContentProps {
   article: Article | null;

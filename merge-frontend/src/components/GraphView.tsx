@@ -25,7 +25,7 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [dbArticles, setDbArticles] = useState<any[]>([]);
+  const [dbArticles, setDbArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
   // パン機能用の状態

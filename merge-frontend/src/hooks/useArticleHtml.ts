@@ -23,6 +23,8 @@ export function useArticleHtml(
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
 
   // 記事が変わったらHTML前処理 → state更新（キャッシュ済みなら即返す）
+  // contentRef は RefObject のため依存配列に含めない（同一参照を保つ）
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (article && (article.rendered_body || article.body_html)) {
       const rawHtml = article.rendered_body || article.body_html || '';
@@ -48,7 +50,7 @@ export function useArticleHtml(
     if (!processedHtml.includes('twitter-tweet')) return;
 
     const loadTwitterWidgets = (): boolean => {
-      const twttr = (window as any).twttr;
+      const twttr = window.twttr;
       if (!twttr || !twttr.widgets) return false;
 
       if (!contentRef.current) return true;
@@ -73,7 +75,7 @@ export function useArticleHtml(
 
         twttr.widgets
           .createTweet(tweetId, container, { theme: 'dark', conversation: 'none', dnt: true, align: 'center' })
-          .then((el: any) => { if (!el) container.appendChild(blockquote); })
+          .then((el) => { if (!el) container.appendChild(blockquote); })
           .catch(() => { container.appendChild(blockquote); });
       });
 
@@ -89,7 +91,7 @@ export function useArticleHtml(
       script.charset = 'utf-8';
       script.onload = () => setTimeout(loadTwitterWidgets, 150);
       document.body.appendChild(script);
-    } else if ((window as any).twttr?.widgets) {
+    } else if (window.twttr?.widgets) {
       setTimeout(loadTwitterWidgets, 50);
     } else {
       let attempts = 0;
@@ -100,7 +102,7 @@ export function useArticleHtml(
     }
   }, [processedHtml]);
 
-  // 記事内のリンクを別タブで開く
+  // 記事内のリンクを別タブで開く + YouTube画像フォールバックをアタッチ
   useEffect(() => {
     if (!contentRef.current) return;
     contentRef.current.querySelectorAll('a').forEach((link) => {
@@ -110,6 +112,19 @@ export function useArticleHtml(
         link.setAttribute('target', '_blank');
         link.setAttribute('rel', 'noopener noreferrer');
       }
+    });
+    // YouTube画像のフォールバック（data-yt-idがある画像にonerrorをアタッチ）
+    const YT_FALLBACK_SIZES = ['sddefault', 'hqdefault'];
+    contentRef.current.querySelectorAll<HTMLImageElement>('img[data-yt-id]').forEach((img) => {
+      if (img.dataset.ytFallbackAttached) return;
+      img.dataset.ytFallbackAttached = 'true';
+      let fallbackIdx = 0;
+      img.onerror = () => {
+        const id = img.dataset.ytId;
+        if (!id || fallbackIdx >= YT_FALLBACK_SIZES.length) { img.onerror = null; return; }
+        img.src = `https://i.ytimg.com/vi/${id}/${YT_FALLBACK_SIZES[fallbackIdx]}.jpg`;
+        fallbackIdx++;
+      };
     });
   }, [processedHtml]);
 

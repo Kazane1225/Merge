@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import ArticleContent from '../ArticleContent';
+import ArticleContent from '../article/ArticleContent';
 import HistoryView from '../HistoryView';
 import GraphView from '../GraphView';
 import type { Article, ArticleTab, HistoryEntry } from '../../types/article';

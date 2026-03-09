@@ -1,8 +1,8 @@
 'use client';
 
 import DOMPurify from 'dompurify';
-import type { QiitaComment, DevComment } from '../types/article';
-import type { ArticleSource } from '../lib/articleHelpers';
+import type { QiitaComment, DevComment } from '../../types/article';
+import type { ArticleSource } from '../../lib/articleHelpers';
 
 const sanitize = (html: string) => DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
 

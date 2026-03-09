@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import clsx from 'clsx';
-import type { Article } from '../types/article';
+import type { Article, QiitaComment, DevComment } from '../types/article';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -88,9 +88,9 @@ export default function MemoEditor({
   useEffect(() => {
     if (showArticleBody && (targetArticle?.rendered_body || targetArticle?.body_html)) {
       // Twitter Embed スクリプトをロード
-      if (typeof window !== 'undefined' && (window as any).twttr) {
+      if (typeof window !== 'undefined' && window.twttr) {
         setTimeout(() => {
-          (window as any).twttr.widgets.load();
+          window.twttr!.widgets.load();
         }, 0);
       } else {
         const script = document.createElement('script');
@@ -126,8 +126,8 @@ export default function MemoEditor({
 
       // 外部記事（未保存）のみコメントをAPIから取得
       // 保存済みDB記事はarticle.comments / article.devCommentsをそのまま使う
-      let comments: any[] | undefined = undefined;
-      let devComments: any[] | undefined = undefined;
+      let comments: QiitaComment[] | undefined = undefined;
+      let devComments: DevComment[] | undefined = undefined;
 
       if (isQiita && isExternal) {
         try {
