@@ -173,7 +173,7 @@ public class DevServiceImpl implements DevService {
 
         log.info("[Dev.to] Fetching {} pages for period='{}' (minReactions={})", cfg.pages(), period, cfg.minReactions());
 
-        List<DevItem> all = new ArrayList<>();
+        Map<String, DevItem> seen = new LinkedHashMap<>();
         for (int page = 1; page <= cfg.pages(); page++) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
                     .queryParam("per_page", 100)
@@ -182,10 +182,12 @@ public class DevServiceImpl implements DevService {
 
             List<DevItem> pageItems = fetchFromDev(builder.build().toUri());
             if (pageItems.isEmpty()) break;
-            all.addAll(pageItems);
+            for (DevItem item : pageItems) {
+                if (item.getId() != null) seen.putIfAbsent(item.getId(), item);
+            }
         }
 
-        List<DevItem> result = all.stream()
+        List<DevItem> result = new ArrayList<>(seen.values()).stream()
                 .filter(a -> getReactions(a) >= cfg.minReactions())
                 .sorted(Comparator.comparingInt(this::getReactions).reversed())
                 .toList();
