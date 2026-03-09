@@ -55,19 +55,22 @@ const CommentsEmpty = () => (
 );
 
 const CommentsHeader = ({ count }: { count: number }) => (
-  <div className="flex items-center gap-3 mb-6">
-    <div className="flex items-center gap-2">
-      <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-      </svg>
-      <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Comments</h2>
+  <div className="mb-8">
+    {/* グラデーション区切り線 */}
+    <div className="h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent mb-8" />
+    <div className="flex items-center gap-3">
+      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-900/50 border border-indigo-700/50 shadow-lg shadow-indigo-900/30">
+        <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+      </div>
+      <h2 className="text-base font-bold text-slate-100 tracking-wide">Comments</h2>
+      {count > 0 && (
+        <span className="text-xs font-bold text-indigo-300 bg-indigo-900/60 border border-indigo-600/40 px-2.5 py-0.5 rounded-full shadow-sm">
+          {count}
+        </span>
+      )}
     </div>
-    {count > 0 && (
-      <span className="text-xs font-semibold text-indigo-400 bg-indigo-900/40 border border-indigo-700/40 px-2 py-0.5 rounded-full">
-        {count}
-      </span>
-    )}
-    <div className="flex-1 h-px bg-slate-700/50" />
   </div>
 );
 
@@ -78,16 +81,16 @@ const QiitaCommentItem = ({ comment }: { comment: QiitaComment }) => {
   const initial = (user?.id ?? '?')[0].toUpperCase();
 
   return (
-    <div className="group flex gap-4 py-5 border-b border-slate-800/60 last:border-0">
+    <div className="group flex gap-4 p-4 rounded-xl bg-slate-800/40 border border-slate-700/40 hover:border-slate-600/60 hover:bg-slate-800/60 transition-all duration-200">
       <div className="flex-shrink-0">
         {user?.profile_image_url ? (
           <img
             src={user.profile_image_url}
             alt={user.id}
-            className="w-9 h-9 rounded-full border-2 border-slate-700/60 group-hover:border-indigo-600/50 transition-colors"
+            className="w-9 h-9 rounded-full border-2 border-slate-700/60 group-hover:border-indigo-500/50 transition-colors"
           />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-800/60 to-purple-800/60 border-2 border-slate-700/60 group-hover:border-indigo-600/50 transition-colors flex items-center justify-center">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-800/60 to-purple-800/60 border-2 border-slate-700/60 group-hover:border-indigo-500/50 transition-colors flex items-center justify-center">
             <span className="text-xs text-indigo-200 font-bold">{initial}</span>
           </div>
         )}
@@ -121,8 +124,12 @@ const DevCommentItem = ({ comment, depth = 0 }: { comment: DevComment; depth?: n
   const avatarClass = `rounded-full border-2 border-slate-700/60 group-hover:border-indigo-600/50 transition-colors ${isReply ? 'w-7 h-7' : 'w-9 h-9'}`;
 
   return (
-    <div>
-      <div className={`group flex gap-4 py-4 ${depth === 0 ? 'border-b border-slate-800/60 last:border-0' : ''}`}>
+    <div className={isReply ? 'pl-3' : ''}>
+      <div className={`group flex gap-3 p-4 rounded-xl transition-all duration-200 ${
+        depth === 0
+          ? 'bg-slate-800/40 border border-slate-700/40 hover:border-slate-600/60 hover:bg-slate-800/60'
+          : 'bg-slate-800/20 border border-slate-700/30 hover:bg-slate-800/40'
+      }`}>
         <div className="flex-shrink-0">
           {user?.profile_image ? (
             <img src={user.profile_image} alt={user.name ?? user.id_code} className={avatarClass} />
@@ -147,7 +154,7 @@ const DevCommentItem = ({ comment, depth = 0 }: { comment: DevComment; depth?: n
             <p className="text-sm text-slate-300 leading-[1.75] whitespace-pre-wrap">{comment.body}</p>
           )}
           {comment.children && comment.children.length > 0 && (
-            <div className="mt-3 pl-1 border-l border-slate-700/40 space-y-0">
+            <div className="mt-3 space-y-2">
               {comment.children.map((child: DevComment) => (
                 <DevCommentItem
                   key={child.id_code}
@@ -186,7 +193,7 @@ export default function ArticleComments({ source, articleId, comments, commentsL
       ) : comments.length === 0 ? (
         <CommentsEmpty />
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-3">
           {source === 'qiita'
             ? (comments as QiitaComment[]).map((c, idx) => <QiitaCommentItem key={c.id ?? `qiita-${idx}`} comment={c} />)
             : (comments as DevComment[]).map((c, idx) => <DevCommentItem key={c.id_code ?? `dev-${idx}`} comment={c} />)

@@ -20,6 +20,10 @@ const decodeHtmlEntities = (value: string): string => {
 export function processArticleHtml(rawHtml: string): { html: string; toc: TocItem[] } {
   let html = rawHtml;
 
+  // Dev.to のコードブロック展開パネルを除去（あの謎の記号の原因）
+  html = html.replace(/<div[^>]*class="[^"]*highlight__panel[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
+  html = html.replace(/<div[^>]*class="[^"]*js-actions-panel[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
+
   // 絵文字imgにインラインスタイルを付与（Tailwindの[&_img]スタイルを上書き）
   html = html.replace(
     /<img([^>]*class="[^"]*emoji[^"]*"[^>]*)>/gi,

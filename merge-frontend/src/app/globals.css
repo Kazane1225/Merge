@@ -572,6 +572,21 @@
 }
 
 /* ========================================
+   Dev.to 固有要素の非表示
+   ======================================== */
+
+/* Dev.to コードブロックのフルスクリーン展開パネル */
+.qiita-content .highlight__panel,
+.qiita-content .highlight__panel-action,
+.qiita-content .js-actions-panel,
+.qiita-content .js-fullscreen-code-action,
+.qiita-content .highlight-action--fullscreen-on,
+.qiita-content .highlight-action--fullscreen-off,
+.qiita-content .crayons-icon.highlight-action {
+  display: none !important;
+}
+
+/* ========================================
    Tables
    ======================================== */
 
