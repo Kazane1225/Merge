@@ -96,7 +96,7 @@ public class QiitaServiceImpl implements QiitaService {
         String query = buildSearchQuery(keyword, period);
         // count は多めに取得してメモリ内ソート、他は1〜2ページ
         int pages = switch (sort) {
-            case "count"   -> 3;
+            case "count"   -> 5;
             case "created" -> 2;
             default        -> 1;
         };

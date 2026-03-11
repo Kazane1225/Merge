@@ -104,7 +104,7 @@ public class DevServiceImpl implements DevService {
         Map<String, DevItem> seen = new LinkedHashMap<>();
         for (int page = 1; page <= pages; page++) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
-                    .queryParam("per_page", 100)
+                    .queryParam("per_page", 1000)
                     .queryParam("page", page);
             if (keyword != null && !keyword.isBlank()) {
                 // Dev.to tag param は単一タグのみ対応。複数指定時は先頭のみ使用
@@ -169,7 +169,7 @@ public class DevServiceImpl implements DevService {
     @Override
     public List<DevItem> getUserArticles(String username) {
         try {
-            String url = BASE_URL + "?username=" + username + "&per_page=100";
+            String url = BASE_URL + "?username=" + username + "&per_page=300";
             ResponseEntity<DevItem[]> response = restTemplate.exchange(url, HttpMethod.GET, createEntity(), DevItem[].class);
             DevItem[] items = response.getBody();
             return Arrays.asList(items != null ? items : new DevItem[0]);
@@ -188,7 +188,7 @@ public class DevServiceImpl implements DevService {
         Map<String, DevItem> seen = new LinkedHashMap<>();
         for (int page = 1; page <= cfg.pages(); page++) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
-                    .queryParam("per_page", 100)
+                    .queryParam("per_page", 500)
                     .queryParam("page", page);
             if (days != null) builder.queryParam("top", days);
 
