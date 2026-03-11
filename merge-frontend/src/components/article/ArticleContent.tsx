@@ -18,9 +18,10 @@ interface ArticleContentProps {
   className?: string;
   onViewUserArticles?: (article: Article) => void;
   onSelectArticle?: (article: Article) => void;
+  hideToc?: boolean;
 }
 
-const ArticleContent = React.memo(function ArticleContent({ article, className, onViewUserArticles, onSelectArticle }: ArticleContentProps) {
+const ArticleContent = React.memo(function ArticleContent({ article, className, onViewUserArticles, onSelectArticle, hideToc }: ArticleContentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const tocNavRef = useRef<HTMLElement>(null);
@@ -199,7 +200,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
         </div>
 
         {/* 目次サイドバー */}
-        {article && (
+        {article && !hideToc && (
           <TableOfContents
             tocItems={tocItems}
             activeHeadingId={activeHeadingId}

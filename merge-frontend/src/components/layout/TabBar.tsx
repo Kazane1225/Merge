@@ -10,9 +10,12 @@ interface TabBarProps {
   tabs: ArticleTab[];
   activeTabId: string | null;
   splitViewTabs: [string, string] | null;
+  draggingTabId?: string | null;
   onTabClick: (tabId: string) => void;
   onTabClose: (tabId: string, e: MouseEvent) => void;
   onToggleSplitView: (tabId: string, e: MouseEvent) => void;
+  onDragStart?: (tabId: string) => void;
+  onDragEnd?: () => void;
 }
 
 const tab = {
@@ -29,7 +32,7 @@ const splitBtn = {
 
 const closeBtn = 'p-0.5 rounded hover:bg-slate-700/50 transition-colors flex-shrink-0';
 
-export default function TabBar({ tabs, activeTabId, splitViewTabs, onTabClick, onTabClose, onToggleSplitView }: TabBarProps) {
+export default function TabBar({ tabs, activeTabId, splitViewTabs, draggingTabId, onTabClick, onTabClose, onToggleSplitView, onDragStart, onDragEnd }: TabBarProps) {
   return (
     <div className="border-b border-slate-800 bg-[#0F172A]/95 backdrop-blur flex items-center overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
       {tabs.map((t) => {
@@ -40,12 +43,16 @@ export default function TabBar({ tabs, activeTabId, splitViewTabs, onTabClick, o
         return (
           <div
             key={t.id}
+            draggable
             onClick={() => onTabClick(t.id)}
+            onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart?.(t.id); }}
+            onDragEnd={onDragEnd}
             className={clsx(
               tab.base,
               isActive        ? tab.active
               : isInSplitView ? tab.splitView
-              :                 tab.inactive
+              :                 tab.inactive,
+              draggingTabId === t.id && 'opacity-40'
             )}
           >
             <span className={clsx('text-[9px] px-1.5 py-0.5 rounded font-bold uppercase border flex-shrink-0', getBadgeClasses(source))}>
@@ -57,7 +64,7 @@ export default function TabBar({ tabs, activeTabId, splitViewTabs, onTabClick, o
             <button
               onClick={(e) => onToggleSplitView(t.id, e)}
               className={isInSplitView ? splitBtn.active : splitBtn.inactive}
-              title="比較モード"
+              title={isInSplitView ? '分割を解除' : 'クリックで分割 / タブをドラッグして分割'}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4H5a2 2 0 00-2 2v14a2 2 0 002 2h4m0-18v18m0-18l6-0m-6 0v18m6-18h4a2 2 0 012 2v14a2 2 0 01-2 2h-4m0-18v18" />

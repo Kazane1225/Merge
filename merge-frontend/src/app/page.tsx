@@ -23,8 +23,16 @@ export default function Home() {
   const sidebarRef = useRef<SidebarHandle>(null);
 
   const { history, addToHistory } = useHistory();
-  const { tabs, activeTabId, splitViewTabs, openTab, closeTab, clickTab, toggleSplitView, clearSplitView, updateArticle } = useTabManager(addToHistory);
-  const { memoWidth, isResizing, handleMouseDown, handleMouseMove, handleMouseUp } = useResizer();
+  const { tabs, activeTabId, splitViewTabs, openTab, closeTab, clickTab, toggleSplitView, clearSplitView, updateArticle, openSplitView } = useTabManager(addToHistory);
+  const { memoWidth, isResizing, handleMouseDown, handleMouseMove: handleMemoMouseMove, handleMouseUp: handleMemoMouseUp } = useResizer();
+
+  // Split view resize
+  const [splitRatio, setSplitRatio] = useState(0.5);
+  const isSplitResizingRef = useRef(false);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+
+  // Drag-to-split
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
 
   const selectedArticle = tabs.find(tab => tab.id === activeTabId)?.article ?? null;
 
@@ -52,12 +60,43 @@ export default function Home() {
     sidebarRef.current?.viewUserArticles(userId, name, profileImage, source);
   };
 
+  const handleDropSplit = (side: 'left' | 'right') => {
+    if (!draggingTabId) return;
+    const otherTabId = tabs.find(t => t.id !== draggingTabId)?.id;
+    if (!otherTabId) return;
+    const [left, right] = side === 'right'
+      ? [activeTabId ?? otherTabId, draggingTabId]
+      : [draggingTabId, activeTabId ?? otherTabId];
+    openSplitView(left, right);
+    setSplitRatio(0.5);
+    setDraggingTabId(null);
+    setViewMode('normal');
+  };
+
+  const handleSplitResizerMouseDown = () => {
+    isSplitResizingRef.current = true;
+  };
+
+  const handleGlobalMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    handleMemoMouseMove(e);
+    if (isSplitResizingRef.current && splitContainerRef.current) {
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const ratio = Math.max(0.2, Math.min(0.8, (e.clientX - rect.left) / rect.width));
+      setSplitRatio(ratio);
+    }
+  };
+
+  const handleGlobalMouseUp = () => {
+    handleMemoMouseUp();
+    isSplitResizingRef.current = false;
+  };
+
   return (
     <div
       className="app-shell flex h-screen w-full bg-[#0B1120] text-slate-300 font-sans selection:bg-indigo-500/30"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseMove={handleGlobalMouseMove}
+      onMouseUp={handleGlobalMouseUp}
+      onMouseLeave={handleGlobalMouseUp}
     >
       {/* Left Sidebar */}
       <Sidebar
@@ -81,26 +120,57 @@ export default function Home() {
             tabs={tabs}
             activeTabId={activeTabId}
             splitViewTabs={splitViewTabs}
+            draggingTabId={draggingTabId}
             onTabClick={clickTab}
             onTabClose={closeTab}
             onToggleSplitView={toggleSplitView}
+            onDragStart={setDraggingTabId}
+            onDragEnd={() => setDraggingTabId(null)}
           />
         )}
 
         <div className="flex-1 overflow-hidden flex min-w-0">
-          <ErrorBoundary>
-            <MainContentSwitcher
-              viewMode={viewMode}
-              tabs={tabs}
-              splitViewTabs={splitViewTabs}
-              selectedArticle={selectedArticle}
-              history={history}
-              onViewUserArticles={handleViewUserArticles}
-              onSelectArticle={openTab}
-              onHistorySelect={handleSelectArticle}
-              setViewMode={setViewMode}
-            />
-          </ErrorBoundary>
+          <div className="flex-1 overflow-hidden flex relative min-w-0" ref={splitContainerRef}>
+            <ErrorBoundary>
+              <MainContentSwitcher
+                viewMode={viewMode}
+                tabs={tabs}
+                splitViewTabs={splitViewTabs}
+                selectedArticle={selectedArticle}
+                history={history}
+                onViewUserArticles={handleViewUserArticles}
+                onSelectArticle={openTab}
+                onHistorySelect={handleSelectArticle}
+                setViewMode={setViewMode}
+                splitRatio={splitRatio}
+                onSplitResizerMouseDown={handleSplitResizerMouseDown}
+              />
+            </ErrorBoundary>
+
+            {/* Drag-to-split overlay */}
+            {draggingTabId && tabs.length >= 2 && (
+              <div className="absolute inset-0 z-50 flex pointer-events-none">
+                <div
+                  className="w-1/2 h-full flex items-center justify-center bg-indigo-500/10 border-r-2 border-indigo-500/60 hover:bg-indigo-500/25 transition-colors pointer-events-auto"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); handleDropSplit('left'); }}
+                >
+                  <div className="bg-indigo-700/90 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-lg pointer-events-none select-none">
+                    ← 左に分割
+                  </div>
+                </div>
+                <div
+                  className="w-1/2 h-full flex items-center justify-center bg-indigo-500/10 border-l-2 border-indigo-500/60 hover:bg-indigo-500/25 transition-colors pointer-events-auto"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); handleDropSplit('right'); }}
+                >
+                  <div className="bg-indigo-700/90 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-lg pointer-events-none select-none">
+                    右に分割 →
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <MemoPane
             selectedArticle={selectedArticle}

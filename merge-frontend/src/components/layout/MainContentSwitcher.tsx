@@ -18,6 +18,8 @@ interface MainContentSwitcherProps {
   onSelectArticle: (article: Article) => void;
   onHistorySelect: (article: Article) => void;
   setViewMode: (mode: ViewMode) => void;
+  splitRatio?: number;
+  onSplitResizerMouseDown?: () => void;
 }
 
 export default function MainContentSwitcher({
@@ -30,6 +32,8 @@ export default function MainContentSwitcher({
   onSelectArticle,
   onHistorySelect,
   setViewMode,
+  splitRatio = 0.5,
+  onSplitResizerMouseDown,
 }: MainContentSwitcherProps) {
   if (viewMode === 'history') {
     return <HistoryView history={history} onSelectArticle={onHistorySelect} className="flex-1" />;
@@ -43,19 +47,28 @@ export default function MainContentSwitcher({
   if (splitViewTabs && splitViewTabs[1]) {
     return (
       <>
-        <ArticleContent
-          article={tabs.find(t => t.id === splitViewTabs[0])?.article ?? null}
-          className="flex-1"
-          onViewUserArticles={onViewUserArticles}
-          onSelectArticle={onSelectArticle}
+        <div style={{ flex: splitRatio }} className="overflow-hidden flex flex-col min-w-0">
+          <ArticleContent
+            article={tabs.find(t => t.id === splitViewTabs[0])?.article ?? null}
+            className="flex-1"
+            hideToc
+            onViewUserArticles={onViewUserArticles}
+            onSelectArticle={onSelectArticle}
+          />
+        </div>
+        <div
+          className="w-1.5 flex-shrink-0 bg-slate-700 hover:bg-indigo-500 cursor-col-resize transition-colors"
+          onMouseDown={onSplitResizerMouseDown}
         />
-        <div className="w-1 bg-indigo-500/50" />
-        <ArticleContent
-          article={tabs.find(t => t.id === splitViewTabs[1])?.article ?? null}
-          className="flex-1"
-          onViewUserArticles={onViewUserArticles}
-          onSelectArticle={onSelectArticle}
-        />
+        <div style={{ flex: 1 - splitRatio }} className="overflow-hidden flex flex-col min-w-0">
+          <ArticleContent
+            article={tabs.find(t => t.id === splitViewTabs[1])?.article ?? null}
+            className="flex-1"
+            hideToc
+            onViewUserArticles={onViewUserArticles}
+            onSelectArticle={onSelectArticle}
+          />
+        </div>
       </>
     );
   }

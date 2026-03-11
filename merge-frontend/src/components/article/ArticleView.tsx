@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useImperativeHandle } from 'react';
+import React, { useEffect, useState, useRef, useImperativeHandle, useCallback } from 'react';
 import clsx from 'clsx';
 import type { Article } from '../../types/article';
 import { API_BASE } from '../../lib/api';
@@ -20,7 +20,7 @@ const styles = {
   select: "flex-1 bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 outline-none disabled:opacity-60",
   goBtn: "bg-indigo-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-indigo-500 disabled:opacity-60",
   card: {
-    base: "p-4 bg-gradient-to-r from-slate-800/60 to-slate-800/40 hover:from-slate-700/80 hover:to-slate-700/60 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-all duration-200 group relative shadow-md hover:shadow-lg hover:shadow-indigo-500/10",
+    base: "p-4 bg-gradient-to-r from-slate-800/60 to-slate-800/40 hover:from-slate-700/80 hover:to-slate-700/60 border border-slate-700/50 hover:border-indigo-500/50 rounded-lg cursor-pointer transition-colors duration-200 group relative shadow-md hover:shadow-lg hover:shadow-indigo-500/10",
     badge: "text-[10px] px-2 py-1 rounded font-bold uppercase border flex-shrink-0 h-fit",
     deleteBtn: "absolute top-3 right-3 p-1.5 bg-red-600/30 hover:bg-red-500/60 text-red-300 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all duration-200 border border-red-600/40",
   },
@@ -171,20 +171,20 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
     setUserView(null);
   };
 
-  const handleDelete = (e: React.MouseEvent, id: number) => {
+  const handleDelete = useCallback((e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     if (!confirm('この記事を削除しますか？')) return;
 
     fetch(`${API_BASE}/articles/${id}`, { method: 'DELETE' })
       .then(res => {
         if (res.ok) {
-          setArticles(articles.filter(a => a.id !== id));
+          setArticles(prev => prev.filter(a => a.id !== id));
         } else {
           alert('削除に失敗しました');
         }
       })
       .catch(() => alert('削除中にエラーが発生しました'));
-  };
+  }, []);
 
   const switchTab = (main: typeof activeMain, sub?: typeof activeSub) => {
     setActiveMain(main);
@@ -375,8 +375,8 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
                 key={article.id}
                 article={article}
                 source={activeMain}
-                onSelect={() => onSelectArticle(article)}
-                onDelete={activeMain === 'database' ? (e) => handleDelete(e, article.id as number) : undefined}
+                onSelect={onSelectArticle}
+                onDelete={activeMain === 'database' ? handleDelete : undefined}
               />
             ))}
           </div>
@@ -405,11 +405,11 @@ const EmptyState = ({ children }: { children: string }) => (
 interface ArticleCardProps {
   article: Article;
   source: 'database' | 'qiita' | 'dev';
-  onSelect: () => void;
-  onDelete?: (e: React.MouseEvent) => void;
+  onSelect: (a: Article) => void;
+  onDelete?: (e: React.MouseEvent, id: number) => void;
 }
 
-const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) => {
+const ArticleCard = React.memo(function ArticleCard({ article, source, onSelect, onDelete }: ArticleCardProps) {
   const badge = { database: 'DB', qiita: 'Qiita', dev: 'Dev.to' }[source];
 
   const getBadgeClasses = () => {
@@ -426,7 +426,7 @@ const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) 
 
   return (
     <div
-      onClick={onSelect}
+      onClick={() => onSelect(article)}
       className={styles.card.base}
     >
       <div className="flex gap-3 items-start">
@@ -451,7 +451,7 @@ const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) 
       </div>
       {onDelete && (
         <button
-          onClick={onDelete}
+          onClick={(e) => onDelete(e, article.id as number)}
           className={styles.card.deleteBtn}
         >
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -461,4 +461,4 @@ const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) 
       )}
     </div>
   );
-};
+});

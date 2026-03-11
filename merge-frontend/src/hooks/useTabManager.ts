@@ -70,6 +70,10 @@ export function useTabManager(onNewTab: (article: Article, tabId: string) => voi
 
   const clearSplitView = () => setSplitViewTabs(null);
 
+  const openSplitView = (tabId1: string, tabId2: string) => {
+    setSplitViewTabs([tabId1, tabId2]);
+  };
+
   const updateArticle = (savedArticle: Article) => {
     setTabs(prev =>
       prev.map(t =>
@@ -88,5 +92,6 @@ export function useTabManager(onNewTab: (article: Article, tabId: string) => voi
     toggleSplitView,
     clearSplitView,
     updateArticle,
+    openSplitView,
   };
 }
