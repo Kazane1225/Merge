@@ -79,7 +79,7 @@ export interface Article {
 
   // エンゲージメント
   likes_count?: number;               // Qiita
-  positive_reactions_count?: number;  // Dev.to
+  likesCount?: number;                // Dev.to
   views?: number;                     // Dev.to
 
   // 著者・タグ

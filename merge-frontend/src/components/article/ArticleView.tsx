@@ -111,8 +111,8 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
         let sorted = [...data];
         if (s === 'count') {
           sorted.sort((a, b) => 
-            (b.likes_count ?? b.positive_reactions_count ?? 0) - 
-            (a.likes_count ?? a.positive_reactions_count ?? 0)
+            (b.likes_count ?? b.likesCount ?? 0) - 
+            (a.likes_count ?? a.likesCount ?? 0)
           );
         } else if (s === 'created') {
           sorted.sort((a, b) => 
@@ -154,7 +154,7 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
       .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
       .then(data => {
         const arr: Article[] = Array.isArray(data) ? data : [];
-        arr.sort((a, b) => (b.likes_count ?? b.positive_reactions_count ?? 0) - (a.likes_count ?? a.positive_reactions_count ?? 0));
+        arr.sort((a, b) => (b.likes_count ?? b.likesCount ?? 0) - (a.likes_count ?? a.likesCount ?? 0));
         setArticles(arr);
       })
       .catch(() => setArticles([]))
@@ -441,8 +441,8 @@ const ArticleCard = ({ article, source, onSelect, onDelete }: ArticleCardProps) 
       </div>
       <p className="text-xs text-slate-400 mt-2 line-clamp-1 truncate">{article.url}</p>
       <div className="text-xs text-slate-500 mt-2 flex gap-4 flex-wrap">
-        {(article.likes_count !== undefined || article.positive_reactions_count !== undefined) && (
-          <span>❤️ {article.likes_count ?? article.positive_reactions_count ?? 0}</span>
+        {(article.likes_count !== undefined || article.likesCount !== undefined) && (
+          <span>❤️ {article.likes_count ?? article.likesCount ?? 0}</span>
         )}
         {article.views !== undefined && <span>👁 {article.views}</span>}
         {(article.created_at || article.published_at) && (

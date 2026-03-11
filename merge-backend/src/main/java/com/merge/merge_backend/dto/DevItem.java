@@ -1,5 +1,6 @@
 package com.merge.merge_backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -25,7 +26,7 @@ public class DevItem {
     // フロントエンド用
     public String getBodyHtml() { return renderedBody; }
 
-    @JsonProperty("positive_reactions_count")
+    @JsonAlias("positive_reactions_count")
     private Integer likesCount;
 
     @JsonProperty("comments_count")
