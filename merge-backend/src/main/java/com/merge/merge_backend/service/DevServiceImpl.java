@@ -2,7 +2,6 @@ package com.merge.merge_backend.service;
 
 import com.merge.merge_backend.dto.DevCommentItem;
 import com.merge.merge_backend.dto.DevItem;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,10 +144,9 @@ public class DevServiceImpl implements DevService {
     public DevItem getArticleDetail(String itemId) {
         try {
             String url = BASE_URL + "/" + itemId;
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, createEntity(), String.class);
-            String body = response.getBody();
-            if (body == null || body.isEmpty()) return new DevItem();
-            return new ObjectMapper().readValue(body, DevItem.class);
+            ResponseEntity<DevItem> response = restTemplate.exchange(url, HttpMethod.GET, createEntity(), DevItem.class);
+            DevItem item = response.getBody();
+            return item != null ? item : new DevItem();
         } catch (Exception e) {
             return new DevItem();
         }

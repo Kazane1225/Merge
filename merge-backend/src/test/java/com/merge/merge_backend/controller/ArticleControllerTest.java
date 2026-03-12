@@ -35,7 +35,7 @@ class ArticleControllerTest {
     private ArticleController articleController;
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setup() {
