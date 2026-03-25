@@ -5,6 +5,7 @@ import com.merge.merge_backend.dto.QiitaItem;
 import java.util.List;
 
 public interface QiitaService {
+    void warmUp();
     List<QiitaItem> searchArticles(String keyword, String sort, String period);
     List<QiitaItem> getHotArticles();
     List<QiitaItem> getHotArticles(String period);

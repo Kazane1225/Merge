@@ -1,22 +1,18 @@
 package com.merge.merge_backend.service;
 
+import com.merge.merge_backend.config.QiitaProperties;
 import com.merge.merge_backend.dto.QiitaCommentItem;
 import com.merge.merge_backend.dto.QiitaItem;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -24,24 +20,26 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class QiitaServiceImpl implements QiitaService {
 
     private static final Logger log = LoggerFactory.getLogger(QiitaServiceImpl.class);
 
-    private final RestTemplate restTemplate;
-    private final Clock clock;
-    private final String QIITA_API_URL = "https://qiita.com/api/v2/items";
-    private final String QIITA_USER_API_URL = "https://qiita.com/api/v2/users";
+    private static final String QIITA_API_URL = "https://qiita.com/api/v2/items";
+    private static final String QIITA_USER_API_URL = "https://qiita.com/api/v2/users";
 
-    public QiitaServiceImpl(RestTemplate restTemplate, Clock clock) {
-        this.restTemplate = restTemplate;
+    private final RestClient restClient;
+    private final QiitaProperties qiitaProperties;
+    private final Clock clock;
+
+    public QiitaServiceImpl(@Qualifier("qiitaRestClient") RestClient restClient,
+                             QiitaProperties qiitaProperties, Clock clock) {
+        this.restClient = restClient;
+        this.qiitaProperties = qiitaProperties;
         this.clock = clock;
     }
-
-    @Value("${qiita.access.token:}")
-    private String qiitaAccessToken;
 
     // ── キャッシュ設定 ────────────────────────────────────────────
     private static class CacheEntry {
@@ -56,29 +54,14 @@ public class QiitaServiceImpl implements QiitaService {
 
     private final Map<String, CacheEntry> hotCache = new ConcurrentHashMap<>();
 
-    // 期間ごとの設定: {取得ページ数(max100), 最小stocks数, キャッシュTTL(秒)}
-    private record PeriodConfig(int pages, int minStocks, long ttlSeconds) {}
-
-    private static final Map<String, PeriodConfig> PERIOD_CONFIG = Map.of(
-        "1day",  new PeriodConfig(1,   3,    15 * 60L),   // 1p  ×100件 / TTL 15分
-        "week",  new PeriodConfig(3,   10,   30 * 60L),   // 3p  ×100件 / TTL 30分
-        "month", new PeriodConfig(5,   45,   60 * 60L),   // 5p  ×100件 / TTL 60分
-        "year",  new PeriodConfig(7,   500,  120 * 60L),  // 7p  ×100件 / TTL 2時間
-        "all",   new PeriodConfig(10,  2500, 120 * 60L)   // 10p ×100件 / TTL 2時間
-    );
-
-    // ── 起動時ウォームアップ (week / month を先読み) ─────────────
-    @PostConstruct
+    // ── ウォームアップ (CacheWarmUpRunner から @Async で呼ばれる) ─
+    @Override
     public void warmUp() {
-        Thread t = new Thread(() -> {
-            log.info("[Qiita] Cache warm-up start");
-            for (String period : List.of("week", "month")) {
-                fetchAndCache(period);
-            }
-            log.info("[Qiita] Cache warm-up done");
-        }, "qiita-warmup");
-        t.setDaemon(true);
-        t.start();
+        log.info("[Qiita] Cache warm-up start");
+        for (String period : List.of("week", "month")) {
+            fetchAndCache(period);
+        }
+        log.info("[Qiita] Cache warm-up done");
     }
 
     // ── 30分ごとにバックグラウンドでキャッシュ更新 ──────────────
@@ -94,13 +77,11 @@ public class QiitaServiceImpl implements QiitaService {
     @Override
     public List<QiitaItem> searchArticles(String keyword, String sort, String period) {
         String query = buildSearchQuery(keyword, period);
-        // count は多めに取得してメモリ内ソート、他は1〜2ページ
         int pages = switch (sort) {
             case "count"   -> 5;
             case "created" -> 2;
             default        -> 1;
         };
-        // 取得後、Java 側で確実に期間フィルタをかける
         List<QiitaItem> results = filterByPeriod(fetchMultiplePages(query, pages), period);
         return switch (sort) {
             case "count" -> results.stream()
@@ -165,29 +146,32 @@ public class QiitaServiceImpl implements QiitaService {
 
     @Override
     public List<QiitaItem> getTimelineArticles() {
-        return fetchFromQiita(URI.create(QIITA_API_URL + "?page=1&per_page=100"));
+        URI uri = UriComponentsBuilder.fromUriString(QIITA_API_URL)
+                .queryParam("page", 1)
+                .queryParam("per_page", 100)
+                .build().toUri();
+        return fetchFromQiita(uri);
     }
 
     // ── 内部処理 ──────────────────────────────────────────────────
     private List<QiitaItem> fetchAndCache(String period) {
-        PeriodConfig cfg = PERIOD_CONFIG.getOrDefault(period, PERIOD_CONFIG.get("week"));
-        String rawQuery = buildHotQuery(period, cfg.minStocks());
+        QiitaProperties.Period cfg = qiitaProperties.getPeriod(period);
+        String rawQuery = buildHotQuery(period, cfg.getMinStocks());
 
-        log.info("[Qiita] Fetching {} pages for period='{}' (minStocks={})", cfg.pages(), period, cfg.minStocks());
+        log.info("[Qiita] Fetching {} pages for period='{}' (minStocks={})",
+                cfg.getPages(), period, cfg.getMinStocks());
 
         List<QiitaItem> all = new ArrayList<>();
-        try {
-            String encodedQuery = URLEncoder.encode(rawQuery, StandardCharsets.UTF_8).replace("+", "%20");
-            for (int page = 1; page <= cfg.pages(); page++) {
-                // Qiita APIはpage最大100まで
-                if (page > 100) break;
-                String urlStr = QIITA_API_URL + "?page=" + page + "&per_page=100&query=" + encodedQuery;
-                List<QiitaItem> pageItems = fetchFromQiita(URI.create(urlStr));
-                if (pageItems.isEmpty()) break;
-                all.addAll(pageItems);
-            }
-        } catch (Exception e) {
-            log.error("[Qiita] fetchAndCache error for period='{}': {}", period, e.getMessage());
+        for (int page = 1; page <= cfg.getPages(); page++) {
+            URI uri = UriComponentsBuilder.fromUriString(QIITA_API_URL)
+                    .queryParam("page", page)
+                    .queryParam("per_page", 100)
+                    .queryParam("query", "{q}")
+                    .buildAndExpand(rawQuery)
+                    .toUri();
+            List<QiitaItem> pageItems = fetchFromQiita(uri);
+            if (pageItems.isEmpty()) break;
+            all.addAll(pageItems);
         }
 
         List<QiitaItem> result = all.stream()
@@ -195,7 +179,7 @@ public class QiitaServiceImpl implements QiitaService {
                 .toList();
 
         log.info("[Qiita] Cached {} items for period='{}'", result.size(), period);
-        hotCache.put(period, new CacheEntry(result, cfg.ttlSeconds()));
+        hotCache.put(period, new CacheEntry(result, cfg.getTtlSeconds()));
         return result;
     }
 
@@ -205,7 +189,7 @@ public class QiitaServiceImpl implements QiitaService {
             case "week"  -> LocalDate.now(clock).minusWeeks(1);
             case "month" -> LocalDate.now(clock).minusMonths(1);
             case "year"  -> LocalDate.now(clock).minusYears(1);
-            default      -> LocalDate.now(clock).minusYears(10); // all
+            default      -> LocalDate.now(clock).minusYears(10);
         };
         return "created:>=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + " stocks:>=" + minStocks;
     }
@@ -213,89 +197,93 @@ public class QiitaServiceImpl implements QiitaService {
     /** 指定クエリで最大 pages ページ取得して結合する（id重複を除去） */
     private List<QiitaItem> fetchMultiplePages(String query, int pages) {
         Map<String, QiitaItem> seen = new LinkedHashMap<>();
-        try {
-            String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8).replace("+", "%20");
-            for (int page = 1; page <= pages; page++) {
-                String url = QIITA_API_URL + "?page=" + page + "&per_page=100&query=" + encoded;
-                List<QiitaItem> items = fetchFromQiita(URI.create(url));
-                if (items.isEmpty()) break;
-                for (QiitaItem item : items) {
-                    if (item.getId() != null) seen.putIfAbsent(item.getId(), item);
-                }
+        for (int page = 1; page <= pages; page++) {
+            URI uri = UriComponentsBuilder.fromUriString(QIITA_API_URL)
+                    .queryParam("page", page)
+                    .queryParam("per_page", 100)
+                    .queryParam("query", "{q}")
+                    .buildAndExpand(query)
+                    .toUri();
+            List<QiitaItem> items = fetchFromQiita(uri);
+            if (items.isEmpty()) break;
+            for (QiitaItem item : items) {
+                if (item.getId() != null) seen.putIfAbsent(item.getId(), item);
             }
-        } catch (Exception e) {
-            log.error("[Qiita] fetchMultiplePages error: {}", e.getMessage());
         }
         return new ArrayList<>(seen.values());
     }
 
     private List<QiitaItem> fetchFromQiita(URI uri) {
+        log.debug("[Qiita] GET {}", uri);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            if (qiitaAccessToken != null && !qiitaAccessToken.isEmpty()) {
-                headers.set("Authorization", "Bearer " + qiitaAccessToken);
-            }
-            ResponseEntity<QiitaItem[]> response = restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers), QiitaItem[].class);
-            QiitaItem[] items = response.getBody();
+            QiitaItem[] items = restClient.get().uri(uri).retrieve().body(QiitaItem[].class);
+            int count = items != null ? items.length : 0;
+            log.debug("[Qiita] Received {} items from {}", count, uri);
             return new ArrayList<>(Arrays.asList(items != null ? items : new QiitaItem[0]));
-        } catch (HttpStatusCodeException e) {
-            log.warn("[Qiita] HTTP error {}: {}", e.getStatusCode(), uri);
+        } catch (RestClientResponseException e) {
+            log.warn("[Qiita] HTTP {} for {}: {}",
+                    e.getStatusCode(), uri, e.getResponseBodyAsString(StandardCharsets.UTF_8));
             return Collections.emptyList();
         } catch (Exception e) {
-            log.error("[Qiita] fetch error: {} - {}", uri, e.getMessage());
+            log.error("[Qiita] Fetch error for {}: {}", uri, e.getMessage());
             return Collections.emptyList();
         }
     }
 
     @Override
     public QiitaItem getArticleDetail(String itemId) {
-        String url = QIITA_API_URL + "/" + itemId;
+        URI uri = UriComponentsBuilder.fromUriString(QIITA_API_URL + "/{id}")
+                .buildAndExpand(itemId).toUri();
+        log.debug("[Qiita] GET article {}", itemId);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            if (qiitaAccessToken != null && !qiitaAccessToken.isEmpty()) {
-                headers.set("Authorization", "Bearer " + qiitaAccessToken);
-            }
-            ResponseEntity<QiitaItem> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), QiitaItem.class);
-            QiitaItem item = response.getBody();
+            QiitaItem item = restClient.get().uri(uri).retrieve().body(QiitaItem.class);
             return item != null ? item : new QiitaItem();
+        } catch (RestClientResponseException e) {
+            log.warn("[Qiita] HTTP {} fetching article {}: {}",
+                    e.getStatusCode(), itemId, e.getResponseBodyAsString(StandardCharsets.UTF_8));
+            return new QiitaItem();
         } catch (Exception e) {
-            log.error("[Qiita] getArticleDetail error: {}", e.getMessage());
+            log.error("[Qiita] Error fetching article {}: {}", itemId, e.getMessage());
             return new QiitaItem();
         }
     }
 
     @Override
     public List<QiitaCommentItem> getArticleComments(String itemId) {
-        String url = QIITA_API_URL + "/" + itemId + "/comments";
+        URI uri = UriComponentsBuilder.fromUriString(QIITA_API_URL + "/{id}/comments")
+                .buildAndExpand(itemId).toUri();
+        log.debug("[Qiita] GET comments for article {}", itemId);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            if (qiitaAccessToken != null && !qiitaAccessToken.isEmpty()) {
-                headers.set("Authorization", "Bearer " + qiitaAccessToken);
-            }
-            ResponseEntity<QiitaCommentItem[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), QiitaCommentItem[].class);
-            QiitaCommentItem[] comments = response.getBody();
+            QiitaCommentItem[] comments = restClient.get().uri(uri).retrieve()
+                    .body(QiitaCommentItem[].class);
             return Arrays.stream(comments != null ? comments : new QiitaCommentItem[0])
                     .filter(c -> c.getId() != null)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
+        } catch (RestClientResponseException e) {
+            log.warn("[Qiita] HTTP {} fetching comments for {}: {}",
+                    e.getStatusCode(), itemId, e.getResponseBodyAsString(StandardCharsets.UTF_8));
+            return Collections.emptyList();
         } catch (Exception e) {
-            log.error("[Qiita] getArticleComments error: {}", e.getMessage());
+            log.error("[Qiita] Error fetching comments for {}: {}", itemId, e.getMessage());
             return Collections.emptyList();
         }
     }
 
     @Override
     public List<QiitaItem> getUserArticles(String userId) {
-        String url = QIITA_USER_API_URL + "/" + userId + "/items?per_page=100";
+        URI uri = UriComponentsBuilder.fromUriString(QIITA_USER_API_URL + "/{id}/items")
+                .queryParam("per_page", 100)
+                .buildAndExpand(userId).toUri();
+        log.debug("[Qiita] GET articles for user {}", userId);
         try {
-            HttpHeaders headers = new HttpHeaders();
-            if (qiitaAccessToken != null && !qiitaAccessToken.isEmpty()) {
-                headers.set("Authorization", "Bearer " + qiitaAccessToken);
-            }
-            ResponseEntity<QiitaItem[]> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), QiitaItem[].class);
-            QiitaItem[] items = response.getBody();
+            QiitaItem[] items = restClient.get().uri(uri).retrieve().body(QiitaItem[].class);
             return new ArrayList<>(Arrays.asList(items != null ? items : new QiitaItem[0]));
+        } catch (RestClientResponseException e) {
+            log.warn("[Qiita] HTTP {} fetching articles for user {}: {}",
+                    e.getStatusCode(), userId, e.getResponseBodyAsString(StandardCharsets.UTF_8));
+            return Collections.emptyList();
         } catch (Exception e) {
-            log.error("[Qiita] getUserArticles error: {}", e.getMessage());
+            log.error("[Qiita] Error fetching articles for user {}: {}", userId, e.getMessage());
             return Collections.emptyList();
         }
     }

@@ -1,429 +1,336 @@
-package com.merge.merge_backend.service;
+﻿package com.merge.merge_backend.service;
 
+import com.merge.merge_backend.config.DevProperties;
 import com.merge.merge_backend.dto.DevCommentItem;
 import com.merge.merge_backend.dto.DevItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
-import java.net.URI;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
  * Unit tests for DevServiceImpl.
- * RestTemplate is injected via constructor and replaced with a mock;
- * all logic is verified through public methods without reflection.
+ * RestClient is backed by MockRestServiceServer so HTTP calls are intercepted
+ * without any real network I/O; all logic is verified through public methods.
  */
-@ExtendWith(MockitoExtension.class)
 class DevServiceImplTest {
 
-    @Mock
-    private RestTemplate restTemplate;
-
+    private MockRestServiceServer mockServer;
     private DevServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new DevServiceImpl(restTemplate);
+        RestClient.Builder builder = RestClient.builder();
+        mockServer = MockRestServiceServer.bindTo(builder).build();
+        service = new DevServiceImpl(builder.build(), new DevProperties());
     }
 
-    // --- keyword (tag param) ---
-
     @Test
-    void searchArticles_withSingleKeyword_uriContainsExactTag() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_withSingleKeyword_uriContainsExactTag() {
+        mockServer.expect(requestTo(containsString("tag=java")))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("java", "rel", "all");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).contains("tag=java");
+        mockServer.verify();
     }
 
     @Test
-    void searchArticles_withMultipleKeywords_uriContainsOnlyFirstTag() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_withSpaceSeparatedKeyword_buildsSingleHyphenatedTag() {
+        mockServer.expect(requestTo(containsString("tag=java-spring")))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("java spring", "rel", "all");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).contains("tag=java");
-        assertThat(cap.getValue().getQuery()).doesNotContain("spring");
+        mockServer.verify();
     }
 
     @Test
-    void searchArticles_withMultipleKeywordsLeadingSpaces_uriContainsFirstNonEmptyTag() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_withLeadingAndMultipleSpaces_normalizedToHyphenatedTag() {
+        mockServer.expect(requestTo(containsString("tag=kotlin-coroutines")))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("  kotlin  coroutines", "rel", "all");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).contains("tag=kotlin");
-        assertThat(cap.getValue().getQuery()).doesNotContain("coroutines");
+        mockServer.verify();
     }
 
-    // --- convertPeriodToDays (verified via top param in URI) ---
+    @Test
+    void searchArticles_withCommaSeparatedTags_usesFirstTagForApi() {
+        mockServer.expect(requestTo(allOf(containsString("tag=javascript"), not(containsString("typescript")))))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        service.searchArticles("javascript,typescript", "rel", "all");
+
+        mockServer.verify();
+    }
 
     @Test
-    void searchArticles_with1dayPeriod_uriContainsTop1() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_with1dayPeriod_uriContainsTop1() {
+        mockServer.expect(requestTo(containsString("top=1")))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("java", "rel", "1day");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).contains("top=1");
+        mockServer.verify();
     }
 
     @Test
-    void searchArticles_withWeekPeriod_uriContainsTop7() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_withWeekPeriod_uriContainsTop7() {
+        mockServer.expect(requestTo(containsString("top=7")))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("java", "rel", "week");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).contains("top=7");
+        mockServer.verify();
     }
 
     @Test
-    void searchArticles_withMonthPeriod_uriContainsTop30() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_withMonthPeriod_uriContainsTop30() {
+        mockServer.expect(requestTo(containsString("top=30")))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("java", "rel", "month");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).contains("top=30");
+        mockServer.verify();
     }
 
     @Test
-    void searchArticles_withYearPeriod_uriContainsTop365() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_withYearPeriod_uriContainsTop365() {
+        mockServer.expect(requestTo(containsString("top=365")))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("java", "rel", "year");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).contains("top=365");
+        mockServer.verify();
     }
 
     @Test
-    void searchArticles_withAllPeriod_uriContainsTop3650() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_withAllPeriod_uriContainsTop3650() {
+        mockServer.expect(requestTo(containsString("top=3650")))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("java", "rel", "all");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).contains("top=3650");
+        mockServer.verify();
     }
 
     @Test
-    void searchArticles_withUnknownPeriod_uriContainsNoTopParam() throws Exception {
-        // privateのモック化
-        ArgumentCaptor<URI> cap = uriCaptor();
+    void searchArticles_withUnknownPeriod_uriContainsNoTopParam() {
+        mockServer.expect(requestTo(not(containsString("top="))))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         service.searchArticles("java", "rel", "unknown");
 
-        // 呼び出し検証
-        assertThat(cap.getValue().getQuery()).doesNotContain("top=");
+        mockServer.verify();
     }
-
-    // --- getReactions (verified via count sort result order) ---
 
     @Test
     void searchArticles_withCountSort_returnsSortedByLikesDescending() {
-        // データ作成
-        DevItem low  = devItem("l1", 10);
-        DevItem high = devItem("h1", 500);
-        // モック化
-        mockRestTemplate(low, high);
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess(devItemArray("h1", 500, "l1", 10), MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.searchArticles("java", "count", "week");
 
-        // 検証
         assertThat(result.get(0).getLikesCount()).isEqualTo(500);
         assertThat(result.get(1).getLikesCount()).isEqualTo(10);
+        mockServer.verify();
     }
 
     @Test
     void searchArticles_withNullLikesCount_treatedAsZeroInSort() {
-        // データ作成
-        DevItem nullLikes = devItem("n1", null);
-        DevItem withLikes = devItem("w1", 100);
-        // モック化
-        mockRestTemplate(nullLikes, withLikes);
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess(
+                        "[{\"id\":\"n1\"},{\"id\":\"w1\",\"positive_reactions_count\":100}]",
+                        MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.searchArticles("java", "count", "week");
 
-        // 検証
         assertThat(result.get(0).getLikesCount()).isEqualTo(100);
+        mockServer.verify();
     }
 
     @Test
     void searchArticles_withZeroLikesCount_treatedAsZero() {
-        // データ作成
-        DevItem zero = devItem("z1", 0);
-        DevItem high = devItem("h1", 50);
-        // モック化
-        mockRestTemplate(zero, high);
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess(devItemArray("z1", 0, "h1", 50), MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.searchArticles("java", "count", "all");
 
-        // 検証
         assertThat(result.get(0).getLikesCount()).isEqualTo(50);
         assertThat(result.get(1).getLikesCount()).isEqualTo(0);
+        mockServer.verify();
     }
 
     @Test
     void searchArticles_withLargeLikesCount_sortedCorrectly() {
-        // データ作成
-        DevItem big = devItem("b1", 99999);
-        DevItem small = devItem("s1", 1);
-        // モック化
-        mockRestTemplate(big, small);
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess(devItemArray("b1", 99999, "s1", 1), MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.searchArticles("java", "count", "all");
 
-        // 検証
         assertThat(result.get(0).getLikesCount()).isEqualTo(99999);
+        mockServer.verify();
     }
-
-    // --- searchArticles default sort ---
 
     @Test
     void searchArticles_withRelSort_preservesOriginalOrder() {
-        // データ作成
-        DevItem first  = devItem("f1", 10);
-        DevItem second = devItem("s2", 500);
-        // モック化
-        mockRestTemplate(first, second);
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess(devItemArray("f1", 10, "s2", 500), MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.searchArticles("java", "rel", "week");
 
-        // 検証
         assertThat(result.get(0).getId()).isEqualTo("f1");
+        mockServer.verify();
     }
 
     @Test
     void searchArticles_returnsEmptyListWhenApiReturnsEmpty() {
-        // モック化
-        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenReturn(ResponseEntity.ok(new DevItem[0]));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.searchArticles("noresult", "rel", "week");
 
-        // 検証
         assertThat(result).isEmpty();
+        mockServer.verify();
     }
-
-    // --- getArticleDetail ---
 
     @Test
     void getArticleDetail_returnsItemFromApi() {
-        // データ作成
-        String json = "{\"id\":\"42\",\"title\":\"Test Article\"}";
-        // モック化
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-                .thenReturn(ResponseEntity.ok(json));
+        mockServer.expect(requestTo(containsString("/articles/42")))
+                .andRespond(withSuccess("{\"id\":\"42\",\"title\":\"Test Article\"}", MediaType.APPLICATION_JSON));
 
-        // 実行
         DevItem result = service.getArticleDetail("42");
 
-        // 検証
-        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo("42");
+        assertThat(result.getTitle()).isEqualTo("Test Article");
+        mockServer.verify();
     }
 
     @Test
     void getArticleDetail_onError_returnsEmptyItem() {
-        // モック化
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-                .thenThrow(new RuntimeException("connection error"));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withServerError());
 
-        // 実行
         DevItem result = service.getArticleDetail("bad-id");
 
-        // 検証
         assertThat(result).isNotNull();
         assertThat(result.getId()).isNull();
+        mockServer.verify();
     }
-
-    // --- getArticleComments ---
 
     @Test
     void getArticleComments_returnsCommentsFromApi() {
-        // データ作成
-        DevCommentItem comment = new DevCommentItem();
-        comment.setId("c1");
-        comment.setBody("Great post!");
-        // モック化
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevCommentItem[].class)))
-                .thenReturn(ResponseEntity.ok(new DevCommentItem[]{comment}));
+        mockServer.expect(requestTo(containsString("a_id=42")))
+                .andRespond(withSuccess("[{\"id\":\"c1\",\"body\":\"Great post!\"}]", MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevCommentItem> result = service.getArticleComments("42");
 
-        // 検証
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getBody()).isEqualTo("Great post!");
+        mockServer.verify();
     }
 
     @Test
     void getArticleComments_onError_returnsEmptyList() {
-        // モック化
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevCommentItem[].class)))
-                .thenThrow(new RuntimeException("timeout"));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withServerError());
 
-        // 実行
         List<DevCommentItem> result = service.getArticleComments("bad-id");
 
-        // 検証
         assertThat(result).isEmpty();
+        mockServer.verify();
     }
-
-    // --- helpers ---
-
-    /** Returns items on first call, then empty array on subsequent calls (simulates pagination end). */
-    private void mockRestTemplate(DevItem... items) {
-        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenReturn(ResponseEntity.ok(items))
-                .thenReturn(ResponseEntity.ok(new DevItem[0]));
-    }
-
-    /** Sets up a mock that captures the URI and returns an empty list, then returns the Captor. */
-    private ArgumentCaptor<URI> uriCaptor() {
-        ArgumentCaptor<URI> cap = ArgumentCaptor.forClass(URI.class);
-        when(restTemplate.exchange(cap.capture(), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenReturn(ResponseEntity.ok(new DevItem[0]));
-        return cap;
-    }
-
-    private DevItem devItem(String id, Integer likesCount) {
-        DevItem item = new DevItem();
-        item.setId(id);
-        item.setLikesCount(likesCount);
-        return item;
-    }
-
-    // --- getHotArticles ---
 
     @Test
     void getHotArticles_noArg_delegatesToWeekPeriodAndReturnsItems() {
-        // データ作成
-        // week: minReactions=5, item with 10 >= 5 → included
-        DevItem a = devItem("a1", 10);
-        // モック化
-        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenReturn(ResponseEntity.ok(new DevItem[]{a}))
-                .thenReturn(ResponseEntity.ok(new DevItem[0]));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[{\"id\":\"a1\",\"positive_reactions_count\":10}]", MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.getHotArticles();
 
-        // 検証
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo("a1");
+        mockServer.verify();
     }
 
     @Test
     void getHotArticles_withPeriodOnCacheMiss_fetchesAndReturnsSortedByLikes() {
-        // データ作成
-        // 1day: minReactions=0, pages=1
-        DevItem high = devItem("h1", 200);
-        DevItem low  = devItem("l1", 10);
-        // モック化
-        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenReturn(ResponseEntity.ok(new DevItem[]{high, low}));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess(devItemArray("h1", 200, "l1", 10), MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.getHotArticles("1day");
 
-        // 検証
         assertThat(result.get(0).getLikesCount()).isEqualTo(200);
         assertThat(result.get(1).getLikesCount()).isEqualTo(10);
+        mockServer.verify();
     }
 
     @Test
     void getHotArticles_onCacheHit_doesNotCallApiAgain() {
-        // データ作成
-        // 1day: minReactions=0, pages=1
-        DevItem a = devItem("a1", 10);
-        // モック化
-        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenReturn(ResponseEntity.ok(new DevItem[]{a}));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[{\"id\":\"a1\",\"positive_reactions_count\":10}]", MediaType.APPLICATION_JSON));
 
-        // 実行
-        service.getHotArticles("1day"); // first call: populates cache
+        service.getHotArticles("1day");
+        List<DevItem> cached = service.getHotArticles("1day");
 
-        // lenient guard: if cache is bypassed this would be called and corrupt results
-        lenient().when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenThrow(new RuntimeException("should not be called"));
-
-        List<DevItem> cached = service.getHotArticles("1day"); // second call: cache hit
-
-        // 検証
         assertThat(cached).hasSize(1);
         assertThat(cached.get(0).getId()).isEqualTo("a1");
+        mockServer.verify();
     }
-
-    // --- getTimelineArticles ---
 
     @Test
     void getTimelineArticles_returnsItemsFromApi() {
-        // データ作成
-        DevItem a = devItem("tl1", 50);
-        // モック化
-        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenReturn(ResponseEntity.ok(new DevItem[]{a}));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withSuccess("[{\"id\":\"tl1\",\"positive_reactions_count\":50}]", MediaType.APPLICATION_JSON));
 
-        // 実行
         List<DevItem> result = service.getTimelineArticles();
 
-        // 検証
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo("tl1");
+        mockServer.verify();
     }
 
     @Test
     void getTimelineArticles_onError_returnsEmptyList() {
-        // モック化
-        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(DevItem[].class)))
-                .thenThrow(new RuntimeException("API error"));
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withServerError());
 
-        // 実行
         List<DevItem> result = service.getTimelineArticles();
 
-        // 検証
         assertThat(result).isEmpty();
+        mockServer.verify();
+    }
+
+    private static String devItemArray(Object... idAndLikes) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < idAndLikes.length; i += 2) {
+            if (i > 0) sb.append(",");
+            sb.append("{\"id\":\"").append(idAndLikes[i]).append("\"");
+            if (idAndLikes[i + 1] != null) {
+                sb.append(",\"positive_reactions_count\":").append(idAndLikes[i + 1]);
+            }
+            sb.append("}");
+        }
+        return sb.append("]").toString();
     }
 }

@@ -1,43 +1,42 @@
 package com.merge.merge_backend.service;
 
+import com.merge.merge_backend.config.DevProperties;
 import com.merge.merge_backend.dto.DevCommentItem;
 import com.merge.merge_backend.dto.DevItem;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class DevServiceImpl implements DevService {
 
     private static final Logger log = LoggerFactory.getLogger(DevServiceImpl.class);
 
-    private final RestTemplate restTemplate;
     private static final String BASE_URL = "https://dev.to/api/articles";
     private static final String BASE_COMMENT_URL = "https://dev.to/api/comments";
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
-    @Value("${dev.access.token:}")
-    private String devApiKey;
+    private final RestClient restClient;
+    private final DevProperties devProperties;
 
-    public DevServiceImpl(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public DevServiceImpl(@Qualifier("devRestClient") RestClient restClient,
+                          DevProperties devProperties) {
+        this.restClient = restClient;
+        this.devProperties = devProperties;
     }
 
-    // ── キャッシュ設定 ────────────────────────────────────────────
+    // ── キャッシュ ────────────────────────────────────────────────
     private static class CacheEntry {
         final List<DevItem> items;
         final Instant expiresAt;
@@ -50,29 +49,14 @@ public class DevServiceImpl implements DevService {
 
     private final Map<String, CacheEntry> hotCache = new ConcurrentHashMap<>();
 
-    // 期間ごとの設定: {取得ページ数, 最小リアクション数, キャッシュTTL(秒)}
-    private record PeriodConfig(int pages, int minReactions, long ttlSeconds) {}
-
-    private static final Map<String, PeriodConfig> PERIOD_CONFIG = Map.of(
-        "1day",  new PeriodConfig(1,   0,    15 * 60L),   // 1p  ×100件  / TTL 15分
-        "week",  new PeriodConfig(3,   5,    30 * 60L),   // 3p  ×100件  / TTL 30分
-        "month", new PeriodConfig(5,   30,   60 * 60L),   // 5p  ×100件  / TTL 60分
-        "year",  new PeriodConfig(7,   150,  120 * 60L),  // 7p  ×100件  / TTL 2時間
-        "all",   new PeriodConfig(10,  500,  120 * 60L)   // 10p ×100件  / TTL 2時間
-    );
-
-    // ── 起動時ウォームアップ (week / month を先読み) ─────────────
-    @PostConstruct
+    // ── ウォームアップ (CacheWarmUpRunner から @Async で呼ばれる) ─
+    @Override
     public void warmUp() {
-        Thread t = new Thread(() -> {
-            log.info("[Dev.to] Cache warm-up start");
-            for (String period : List.of("week", "month")) {
-                fetchAndCache(period);
-            }
-            log.info("[Dev.to] Cache warm-up done");
-        }, "dev-warmup");
-        t.setDaemon(true);
-        t.start();
+        log.info("[Dev.to] Cache warm-up start");
+        for (String period : List.of("week", "month")) {
+            fetchAndCache(period);
+        }
+        log.info("[Dev.to] Cache warm-up done");
     }
 
     // ── 30分ごとにバックグラウンドでキャッシュ更新 ──────────────
@@ -88,36 +72,11 @@ public class DevServiceImpl implements DevService {
     @Override
     public List<DevItem> searchArticles(String keyword, String sort, String period) {
         return switch (sort) {
-            // 反応順: 複数ページ取得してメモリ内ソート
             case "count" -> fetchSearchPages(keyword, period, 5).stream()
                     .sorted(Comparator.comparingInt(this::getReactions).reversed())
                     .toList();
-            // 新着順・関連度順: 1ページ取得 (フロント側でもソート)
             default -> fetchSearchPages(keyword, period, 1);
         };
-    }
-
-    /** キーワード・期間・ページ数を指定して Dev.to API から記事を取得する（id重複を除去） */
-    private List<DevItem> fetchSearchPages(String keyword, String period, int pages) {
-        Integer days = convertPeriodToDays(period);
-        Map<String, DevItem> seen = new LinkedHashMap<>();
-        for (int page = 1; page <= pages; page++) {
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
-                    .queryParam("per_page", 1000)
-                    .queryParam("page", page);
-            if (keyword != null && !keyword.isBlank()) {
-                // Dev.to tag param は単一タグのみ対応。複数指定時は先頭のみ使用
-                String firstTag = keyword.trim().split("\\s+")[0];
-                builder.queryParam("tag", firstTag);
-            }
-            if (days != null) builder.queryParam("top", days);
-            List<DevItem> items = fetchFromDev(builder.build().toUri());
-            if (items.isEmpty()) break;
-            for (DevItem item : items) {
-                if (item.getId() != null) seen.putIfAbsent(item.getId(), item);
-            }
-        }
-        return new ArrayList<>(seen.values());
     }
 
     @Override
@@ -142,49 +101,130 @@ public class DevServiceImpl implements DevService {
 
     @Override
     public DevItem getArticleDetail(String itemId) {
+        URI uri = UriComponentsBuilder.fromUriString(BASE_URL + "/{id}")
+                .buildAndExpand(itemId).toUri();
+        log.debug("[Dev.to] GET article {}", itemId);
         try {
-            String url = BASE_URL + "/" + itemId;
-            ResponseEntity<DevItem> response = restTemplate.exchange(url, HttpMethod.GET, createEntity(), DevItem.class);
-            DevItem item = response.getBody();
+            DevItem item = restClient.get().uri(uri).retrieve().body(DevItem.class);
             return item != null ? item : new DevItem();
+        } catch (RestClientResponseException e) {
+            log.warn("[Dev.to] HTTP {} fetching article {}: {}",
+                    e.getStatusCode(), itemId, e.getResponseBodyAsString(StandardCharsets.UTF_8));
+            return new DevItem();
         } catch (Exception e) {
+            log.error("[Dev.to] Error fetching article {}: {}", itemId, e.getMessage());
             return new DevItem();
         }
     }
 
     @Override
     public List<DevCommentItem> getArticleComments(String itemId) {
+        URI uri = UriComponentsBuilder.fromUriString(BASE_COMMENT_URL)
+                .queryParam("a_id", "{id}")
+                .buildAndExpand(itemId).toUri();
+        log.debug("[Dev.to] GET comments for article {}", itemId);
         try {
-            String url = BASE_COMMENT_URL + "?a_id=" + itemId;
-            ResponseEntity<DevCommentItem[]> response = restTemplate.exchange(url, HttpMethod.GET, createEntity(), DevCommentItem[].class);
-            DevCommentItem[] items = response.getBody();
+            DevCommentItem[] items = restClient.get().uri(uri).retrieve()
+                    .body(DevCommentItem[].class);
             return Arrays.asList(items != null ? items : new DevCommentItem[0]);
+        } catch (RestClientResponseException e) {
+            log.warn("[Dev.to] HTTP {} fetching comments for {}: {}",
+                    e.getStatusCode(), itemId, e.getResponseBodyAsString(StandardCharsets.UTF_8));
+            return Collections.emptyList();
         } catch (Exception e) {
+            log.error("[Dev.to] Error fetching comments for {}: {}", itemId, e.getMessage());
             return Collections.emptyList();
         }
     }
 
     @Override
     public List<DevItem> getUserArticles(String username) {
+        URI uri = UriComponentsBuilder.fromUriString(BASE_URL)
+                .queryParam("username", "{u}")
+                .queryParam("per_page", 300)
+                .buildAndExpand(username).toUri();
+        log.debug("[Dev.to] GET articles for user {}", username);
         try {
-            String url = BASE_URL + "?username=" + username + "&per_page=300";
-            ResponseEntity<DevItem[]> response = restTemplate.exchange(url, HttpMethod.GET, createEntity(), DevItem[].class);
-            DevItem[] items = response.getBody();
+            DevItem[] items = restClient.get().uri(uri).retrieve().body(DevItem[].class);
             return Arrays.asList(items != null ? items : new DevItem[0]);
+        } catch (RestClientResponseException e) {
+            log.warn("[Dev.to] HTTP {} fetching articles for user {}: {}",
+                    e.getStatusCode(), username, e.getResponseBodyAsString(StandardCharsets.UTF_8));
+            return Collections.emptyList();
         } catch (Exception e) {
+            log.error("[Dev.to] Error fetching articles for user {}: {}", username, e.getMessage());
             return Collections.emptyList();
         }
     }
 
     // ── 内部処理 ──────────────────────────────────────────────────
-    private List<DevItem> fetchAndCache(String period) {
-        PeriodConfig cfg = PERIOD_CONFIG.getOrDefault(period, PERIOD_CONFIG.get("week"));
+
+    /**
+     * Parses a keyword string into Dev.to tag format.
+     * Comma/semicolon = tag separator; spaces within a tag are replaced with hyphens;
+     * everything is lowercased to match Dev.to tag conventions.
+     *
+     * Examples:
+     *   "java"               → ["java"]
+     *   "java spring"        → ["java-spring"]   (single hyphenated tag)
+     *   "javascript,typescript" → ["javascript", "typescript"]  (two tags, first used for API)
+     *   "machine learning"   → ["machine-learning"]
+     */
+    private List<String> parseTags(String keyword) {
+        if (keyword == null || keyword.isBlank()) return List.of();
+        return Arrays.stream(keyword.split("[,;]+"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> s.toLowerCase(Locale.ROOT).replaceAll("\\s+", "-"))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Fetches up to {@code pages} pages from Dev.to for the given keyword/period.
+     * Uses the first parsed tag for the API {@code tag} parameter.
+     * Additional tags (comma-separated) are filtered client-side against {@code tag_list}.
+     */
+    private List<DevItem> fetchSearchPages(String keyword, String period, int pages) {
+        List<String> tags = parseTags(keyword);
+        String primaryTag = tags.isEmpty() ? null : tags.get(0);
+        List<String> additionalTags = tags.size() > 1 ? tags.subList(1, tags.size()) : List.of();
         Integer days = convertPeriodToDays(period);
 
-        log.info("[Dev.to] Fetching {} pages for period='{}' (minReactions={})", cfg.pages(), period, cfg.minReactions());
+        Map<String, DevItem> seen = new LinkedHashMap<>();
+        for (int page = 1; page <= pages; page++) {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
+                    .queryParam("per_page", 1000)
+                    .queryParam("page", page);
+            if (primaryTag != null) builder.queryParam("tag", primaryTag);
+            if (days != null) builder.queryParam("top", days);
+
+            List<DevItem> items = fetchFromDev(builder.build().toUri());
+            if (items.isEmpty()) break;
+            for (DevItem item : items) {
+                if (item.getId() != null) seen.putIfAbsent(item.getId(), item);
+            }
+        }
+
+        List<DevItem> result = new ArrayList<>(seen.values());
+        // Client-side filter: keep only items that have ALL additional tags
+        if (!additionalTags.isEmpty()) {
+            result = result.stream()
+                    .filter(item -> item.getTagList() != null
+                            && additionalTags.stream().allMatch(t -> item.getTagList().contains(t)))
+                    .collect(Collectors.toList());
+        }
+        return result;
+    }
+
+    private List<DevItem> fetchAndCache(String period) {
+        DevProperties.Period cfg = devProperties.getPeriod(period);
+        Integer days = convertPeriodToDays(period);
+
+        log.info("[Dev.to] Fetching {} pages for period='{}' (minReactions={})",
+                cfg.getPages(), period, cfg.getMinReactions());
 
         Map<String, DevItem> seen = new LinkedHashMap<>();
-        for (int page = 1; page <= cfg.pages(); page++) {
+        for (int page = 1; page <= cfg.getPages(); page++) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
                     .queryParam("per_page", 500)
                     .queryParam("page", page);
@@ -198,12 +238,12 @@ public class DevServiceImpl implements DevService {
         }
 
         List<DevItem> result = new ArrayList<>(seen.values()).stream()
-                .filter(a -> getReactions(a) >= cfg.minReactions())
+                .filter(a -> getReactions(a) >= cfg.getMinReactions())
                 .sorted(Comparator.comparingInt(this::getReactions).reversed())
                 .toList();
 
         log.info("[Dev.to] Cached {} items for period='{}'", result.size(), period);
-        hotCache.put(period, new CacheEntry(result, cfg.ttlSeconds()));
+        hotCache.put(period, new CacheEntry(result, cfg.getTtlSeconds()));
         return result;
     }
 
@@ -212,20 +252,20 @@ public class DevServiceImpl implements DevService {
     }
 
     private List<DevItem> fetchFromDev(URI uri) {
+        log.debug("[Dev.to] GET {}", uri);
         try {
-            ResponseEntity<DevItem[]> response = restTemplate.exchange(uri, HttpMethod.GET, createEntity(), DevItem[].class);
-            DevItem[] items = response.getBody();
+            DevItem[] items = restClient.get().uri(uri).retrieve().body(DevItem[].class);
+            int count = items != null ? items.length : 0;
+            log.debug("[Dev.to] Received {} items from {}", count, uri);
             return new ArrayList<>(Arrays.asList(items != null ? items : new DevItem[0]));
+        } catch (RestClientResponseException e) {
+            log.warn("[Dev.to] HTTP {} for {}: {}",
+                    e.getStatusCode(), uri, e.getResponseBodyAsString(StandardCharsets.UTF_8));
+            return Collections.emptyList();
         } catch (Exception e) {
+            log.error("[Dev.to] Fetch error for {}: {}", uri, e.getMessage());
             return Collections.emptyList();
         }
-    }
-
-    private HttpEntity<String> createEntity() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", USER_AGENT);
-        if (devApiKey != null && !devApiKey.isEmpty()) headers.set("api-key", devApiKey);
-        return new HttpEntity<>(headers);
     }
 
     private Integer convertPeriodToDays(String period) {

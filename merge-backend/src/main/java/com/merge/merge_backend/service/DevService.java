@@ -5,6 +5,7 @@ import com.merge.merge_backend.dto.DevItem;
 import java.util.List;
 
 public interface DevService {
+    void warmUp();
     List<DevItem> searchArticles(String keyword, String sort, String period);
     List<DevItem> getHotArticles();
     List<DevItem> getHotArticles(String period);

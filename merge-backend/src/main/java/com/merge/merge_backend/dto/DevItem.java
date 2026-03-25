@@ -51,4 +51,8 @@ public class DevItem {
 
     @JsonProperty("dev_comments")
     private List<DevCommentItem> devComments;
+
+    // Dev.to API returns tag_list as an array of tag strings (e.g. ["java", "spring"])
+    @JsonProperty("tag_list")
+    private List<String> tagList;
 }
