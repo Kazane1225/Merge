@@ -4,9 +4,10 @@ import React from 'react';
 import ArticleContent from '../article/ArticleContent';
 import HistoryView from '../HistoryView';
 import GraphView from '../GraphView';
+import HomeView from '../HomeView';
 import type { Article, ArticleTab, HistoryEntry } from '../../types/article';
 
-type ViewMode = 'normal' | 'history' | 'graph';
+type ViewMode = 'home' | 'normal' | 'history' | 'graph';
 
 interface MainContentSwitcherProps {
   viewMode: ViewMode;
@@ -17,6 +18,7 @@ interface MainContentSwitcherProps {
   onViewUserArticles: (article: Article) => void;
   onSelectArticle: (article: Article) => void;
   onHistorySelect: (article: Article) => void;
+  onOpenSearch: () => void;
   setViewMode: (mode: ViewMode) => void;
   splitRatio?: number;
   onSplitResizerMouseDown?: () => void;
@@ -31,10 +33,15 @@ export default function MainContentSwitcher({
   onViewUserArticles,
   onSelectArticle,
   onHistorySelect,
+  onOpenSearch,
   setViewMode,
   splitRatio = 0.5,
   onSplitResizerMouseDown,
 }: MainContentSwitcherProps) {
+  if (viewMode === 'home') {
+    return <HomeView onSelectArticle={onSelectArticle} onOpenSearch={onOpenSearch} className="flex-1" />;
+  }
+
   if (viewMode === 'history') {
     return <HistoryView history={history} onSelectArticle={onHistorySelect} className="flex-1" />;
   }

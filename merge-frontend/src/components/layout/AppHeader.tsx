@@ -3,7 +3,7 @@
 import React from 'react';
 import clsx from 'clsx';
 
-type ViewMode = 'normal' | 'history' | 'graph';
+type ViewMode = 'home' | 'normal' | 'history' | 'graph';
 
 interface AppHeaderProps {
   sidebarOpen: boolean;
@@ -20,6 +20,7 @@ const viewModeBtn = {
 } as const;
 
 const VIEW_MODES: { mode: ViewMode; icon: string; title: string }[] = [
+  { mode: 'home',    icon: '🏠', title: 'ホーム' },
   { mode: 'normal',  icon: '📄', title: '通常表示' },
   { mode: 'history', icon: '🕐', title: '履歴' },
   { mode: 'graph',   icon: '🕸️', title: 'グラフビュー' },

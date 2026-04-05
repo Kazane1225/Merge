@@ -15,11 +15,11 @@ import { useTabManager } from "../hooks/useTabManager";
 import { useResizer } from "../hooks/useResizer";
 import ErrorBoundary from "../components/ErrorBoundary";
 
-type ViewMode = 'normal' | 'history' | 'graph';
+type ViewMode = 'home' | 'normal' | 'history' | 'graph';
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('normal');
+  const [viewMode, setViewMode] = useState<ViewMode>('home');
   const sidebarRef = useRef<SidebarHandle>(null);
 
   const { history, addToHistory } = useHistory();
@@ -43,7 +43,7 @@ export default function Home() {
   };
 
   const handleViewModeChange = (mode: ViewMode) => {
-    if (mode === 'normal') clearSplitView();
+    if (mode !== 'normal') clearSplitView();
     setViewMode(mode);
   };
 
@@ -91,6 +91,11 @@ export default function Home() {
     isSplitResizingRef.current = false;
   };
 
+  const handleOpenSearch = () => {
+    setSidebarOpen(true);
+    setViewMode('normal');
+  };
+
   return (
     <div
       className="app-shell flex h-screen w-full bg-[#0B1120] text-slate-300 font-sans selection:bg-indigo-500/30"
@@ -98,13 +103,15 @@ export default function Home() {
       onMouseUp={handleGlobalMouseUp}
       onMouseLeave={handleGlobalMouseUp}
     >
-      {/* Left Sidebar */}
-      <Sidebar
-        ref={sidebarRef}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onSelectArticle={handleSelectArticle}
-      />
+      {/* Left Sidebar — ホーム画面では非表示 */}
+      {viewMode !== 'home' && (
+        <Sidebar
+          ref={sidebarRef}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onSelectArticle={handleSelectArticle}
+        />
+      )}
 
       <main className="flex-1 flex flex-col min-w-0 bg-[#0B1120] relative">
         <AppHeader
@@ -141,6 +148,7 @@ export default function Home() {
                 onViewUserArticles={handleViewUserArticles}
                 onSelectArticle={openTab}
                 onHistorySelect={handleSelectArticle}
+                onOpenSearch={handleOpenSearch}
                 setViewMode={setViewMode}
                 splitRatio={splitRatio}
                 onSplitResizerMouseDown={handleSplitResizerMouseDown}
@@ -172,20 +180,25 @@ export default function Home() {
             )}
           </div>
 
-          <MemoPane
-            selectedArticle={selectedArticle}
-            memoWidth={memoWidth}
-            isResizing={isResizing}
-            onMouseDown={handleMouseDown}
-            onArticleSaved={updateArticle}
-          />
+          {/* メモペイン — ホーム画面では非表示 */}
+          {viewMode !== 'home' && (
+            <MemoPane
+              selectedArticle={selectedArticle}
+              memoWidth={memoWidth}
+              isResizing={isResizing}
+              onMouseDown={handleMouseDown}
+              onArticleSaved={updateArticle}
+            />
+          )}
         </div>
       </main>
 
-      {/* Mobile Memo Editor */}
-      <aside className="lg:hidden w-full h-96 flex-shrink-0 flex flex-col border-t border-slate-800 bg-[#0F172A] z-20">
-        <MemoEditor targetArticle={selectedArticle} onArticleSaved={updateArticle} />
-      </aside>
+      {/* Mobile Memo Editor — ホーム画面では非表示 */}
+      {viewMode !== 'home' && (
+        <aside className="lg:hidden w-full h-96 flex-shrink-0 flex flex-col border-t border-slate-800 bg-[#0F172A] z-20">
+          <MemoEditor targetArticle={selectedArticle} onArticleSaved={updateArticle} />
+        </aside>
+      )}
     </div>
   );
 }
