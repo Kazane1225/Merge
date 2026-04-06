@@ -35,7 +35,7 @@ export default function HistoryView({ history, onSelectArticle, className }: His
   const grouped = groupByDate(history);
 
   return (
-    <div className={clsx('overflow-y-auto bg-[#0B1120]', className)}>
+    <div className={clsx('overflow-y-auto bg-[#0B1120] custom-scrollbar', className)}>
       <div className="w-full max-w-5xl mx-auto px-8 py-8">
         <h2 className="text-3xl font-bold text-slate-100 mb-8 flex items-center gap-3">
           <span>🕐</span>

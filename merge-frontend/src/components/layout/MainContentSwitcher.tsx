@@ -39,7 +39,7 @@ export default function MainContentSwitcher({
   onSplitResizerMouseDown,
 }: MainContentSwitcherProps) {
   if (viewMode === 'home') {
-    return <HomeView onSelectArticle={onSelectArticle} onOpenSearch={onOpenSearch} className="flex-1" />;
+    return <HomeView onSelectArticle={onHistorySelect} onOpenSearch={onOpenSearch} history={history} className="flex-1" />;
   }
 
   if (viewMode === 'history') {

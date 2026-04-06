@@ -131,7 +131,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     <div
       ref={contentRef}
       onScroll={handleScroll}
-      className={clsx('overflow-y-auto scroll-smooth relative w-full h-full', className)}
+      className={clsx('overflow-y-auto scroll-smooth relative w-full h-full custom-scrollbar', className)}
     >
       {/* スクロール進捗バー */}
       <div className="fixed top-0 left-0 right-0 h-1 bg-slate-800/50 z-50">

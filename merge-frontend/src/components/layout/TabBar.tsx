@@ -34,7 +34,7 @@ const closeBtn = 'p-0.5 rounded hover:bg-slate-700/50 transition-colors flex-shr
 
 export default function TabBar({ tabs, activeTabId, splitViewTabs, draggingTabId, onTabClick, onTabClose, onToggleSplitView, onDragStart, onDragEnd }: TabBarProps) {
   return (
-    <div className="border-b border-slate-800 bg-[#0F172A]/95 backdrop-blur flex items-center overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+    <div className="border-b border-slate-800 bg-[#0F172A]/95 backdrop-blur flex items-center overflow-x-auto custom-scrollbar">
       {tabs.map((t) => {
         const source = getArticleSource(t.article);
         const isActive = t.id === activeTabId;

@@ -363,7 +363,7 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
       )}
 
       {/* 記事リスト */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         {loading && articles.length === 0 ? (
           <EmptyState>読み込み中...</EmptyState>
         ) : articles.length === 0 ? (

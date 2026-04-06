@@ -47,7 +47,7 @@ const Sidebar = React.forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
           </svg>
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         <ArticleView ref={articleViewRef} onSelectArticle={onSelectArticle} />
       </div>
     </aside>
