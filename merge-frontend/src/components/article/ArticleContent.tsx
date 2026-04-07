@@ -12,6 +12,7 @@ import ArticleComments from './ArticleComments';
 import TableOfContents from './TableOfContents';
 import ArticleBody from './ArticleBody';
 import { API_BASE } from '../../lib/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ArticleContentProps {
   article: Article | null;
@@ -35,6 +36,18 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
   const { comments, commentsLoading } = useArticleComments(article);
 
   const source = article ? getArticleSource(article) : 'database';
+
+  const {
+    isTranslated,
+    isTranslating,
+    error: translateError,
+    targetLang,
+    toggle: toggleTranslation,
+    translatedTitle,
+    translatedHtml,
+    translatedTocItems,
+    translatedComments,
+  } = useTranslation(article, processedHtml, comments);
 
   // TOC heading要素をキャッシュ
   useEffect(() => {
@@ -148,27 +161,72 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
           <div className="w-full max-w-5xl px-6 lg:px-8 py-8">
             {article ? (
               <div className="w-full">
-                <ArticleHeader article={article} />
+                <ArticleHeader article={article} translatedTitle={translatedTitle} />
                 <ArticleMeta article={article} readingTime={readingTime} onViewUserArticles={onViewUserArticles} />
 
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 hover:underline break-all font-mono text-sm mb-8 group"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  <span>{article.url}</span>
-                </a>
+                <div className="flex items-center gap-3 mb-8 flex-wrap">
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 hover:underline break-all font-mono text-sm group"
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    <span>{article.url}</span>
+                  </a>
 
-                <ArticleBody processedHtml={processedHtml} />
+                  <button
+                    onClick={toggleTranslation}
+                    disabled={isTranslating}
+                    title={isTranslated ? '原文に戻す' : `${targetLang === 'JA' ? '日本語' : '英語'}に翻訳`}
+                    className={clsx(
+                      'ml-auto flex-shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all',
+                      isTranslated
+                        ? 'bg-indigo-600/30 border-indigo-500/60 text-indigo-300 hover:bg-indigo-600/50'
+                        : 'bg-slate-800/60 border-slate-700/50 text-slate-400 hover:border-indigo-500/50 hover:text-slate-200',
+                      isTranslating && 'opacity-60 cursor-wait',
+                    )}
+                  >
+                    {isTranslating ? (
+                      <>
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                        </svg>
+                        翻訳中…
+                      </>
+                    ) : isTranslated ? (
+                      <>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                        原文に戻す
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                        </svg>
+                        {targetLang === 'JA' ? '日本語に翻訳' : '英語に翻訳'}
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {translateError && (
+                  <div className="mb-4 px-4 py-2.5 rounded-lg bg-red-900/30 border border-red-700/40 text-xs text-red-300">
+                    {translateError}
+                  </div>
+                )}
+
+                <ArticleBody processedHtml={translatedHtml ?? processedHtml} />
 
                 <ArticleComments
                   source={source}
                   articleId={article.id}
-                  comments={comments}
+                  comments={translatedComments ?? comments}
                   commentsLoading={commentsLoading}
                 />
               </div>
@@ -202,7 +260,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
         {/* 目次サイドバー */}
         {article && !hideToc && (
           <TableOfContents
-            tocItems={tocItems}
+            tocItems={translatedTocItems ?? tocItems}
             activeHeadingId={activeHeadingId}
             onHeadingClick={scrollToHeading}
             navRef={tocNavRef}

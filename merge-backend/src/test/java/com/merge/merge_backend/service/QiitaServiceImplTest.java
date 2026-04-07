@@ -1,4 +1,4 @@
-﻿package com.merge.merge_backend.service;
+package com.merge.merge_backend.service;
 
 import com.merge.merge_backend.config.QiitaProperties;
 import com.merge.merge_backend.dto.QiitaCommentItem;
