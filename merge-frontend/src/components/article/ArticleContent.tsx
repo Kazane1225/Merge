@@ -49,8 +49,10 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     translatedComments,
   } = useTranslation(article, processedHtml, comments);
 
-  // TOC heading要素をキャッシュ
+  // TOC heading要素をキャッシュ（記事変更時はアクティブ見出しもリセット）
   useEffect(() => {
+    activeHeadingIdRef.current = '';
+    setActiveHeadingId('');
     if (!contentRef.current || tocItems.length === 0) {
       headingElementsRef.current = [];
       return;

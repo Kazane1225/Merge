@@ -35,6 +35,7 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
   const [activeMain, setActiveMain] = useState<'database' | 'qiita' | 'dev'>('database');
   const [activeSub, setActiveSub] = useState<'search' | 'trending' | 'timeline'>('search');
   const [articles, setArticles] = useState<Article[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [sort, setSort] = useState<'rel' | 'count' | 'created'>('rel');
   const [period, setPeriod] = useState<'all' | '1day' | 'week' | 'month'>('all');
@@ -65,6 +66,7 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
     const p = opts?.period ?? period;
     const kw = opts?.keyword ?? keyword;
 
+    setHasSearched(true);
     setLoading(true);
     setArticles([]);
 
@@ -137,6 +139,7 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
     setSavedArticles(articlesRef.current);
     setUserView({ userId, name, profileImage });
     setActiveMain(source);
+    setHasSearched(true);
     setLoading(true);
     setArticles([]);
     if (source === 'qiita') {
@@ -367,7 +370,7 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
         {loading && articles.length === 0 ? (
           <EmptyState>読み込み中...</EmptyState>
         ) : articles.length === 0 ? (
-          <EmptyState>記事が見つかりません</EmptyState>
+          <EmptyState>{hasSearched ? '記事が見つかりません' : 'キーワードを入力して検索してください'}</EmptyState>
         ) : (
           <div className="space-y-3 p-3">
             {articles.map((article) => (
