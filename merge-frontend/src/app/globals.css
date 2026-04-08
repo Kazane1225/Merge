@@ -586,6 +586,11 @@
   display: none !important;
 }
 
+.qiita-content .multiple_reactions_icons_container {
+  display: inline-flex !important;
+  flex-direction: row !important;
+}
+
 /* ========================================
    Tables
    ======================================== */

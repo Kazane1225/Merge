@@ -23,6 +23,22 @@ export function processArticleHtml(rawHtml: string): { html: string; toc: TocIte
   // Dev.to のコードブロック展開パネルを除去（あの謎の記号の原因）
   html = html.replace(/<div[^>]*class="[^"]*highlight__panel[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
   html = html.replace(/<div[^>]*class="[^"]*js-actions-panel[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
+  html = html.replace(
+    /<div([^>]*class="[^"]*crayons-story_bottom[^"]*"[^>]*)>/gi,
+    '<div$1 style="display:flex;flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;">'
+  );
+   html = html.replace(
+    /<div([^>]*class="[^"]*crayons-story_details[^"]*"[^>]*)>/gi,
+    '<div$1 style="display:inline-flex;flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;">'
+  );
+  html = html.replace(
+    /<div([^>]*class="[^"]*crayons-story_save[^"]*"[^>]*)>/gi,
+    '<div$1 style="display:inline-flex;flex-direction:row;align-items:center;gap:8px;margin-left:auto;">'
+  );
+  html = html.replace(
+    /<span([^>]*class="[^"]*multiple_reactions_icons_container[^"]*"[^>]*)>/gi,
+    '<span$1 style="display:inline-flex;flex-direction:row;align-items:center;">'
+  );
 
   // 絵文字imgにインラインスタイルを付与（Tailwindの[&_img]スタイルを上書き）
   html = html.replace(

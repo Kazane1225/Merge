@@ -9,6 +9,8 @@ interface UseArticleHtmlResult {
 }
 
 // 処理済みHTMLのキャッシュ（記事IDをキーに）
+// articleProcessor.ts を変更したらこのバージョンを上げること
+const PROCESSOR_VERSION = 'v3';
 const htmlCache = new Map<string, { html: string; toc: TocItem[] }>();
 
 /**
@@ -28,7 +30,7 @@ export function useArticleHtml(
   useEffect(() => {
     if (article && (article.rendered_body || article.body_html)) {
       const rawHtml = article.rendered_body || article.body_html || '';
-      const cacheKey = String(article.id || article.url || rawHtml.slice(0, 64));
+      const cacheKey = `${PROCESSOR_VERSION}:${String(article.id || article.url || rawHtml.slice(0, 64))}`;
       let result = htmlCache.get(cacheKey);
       if (!result) {
         result = processArticleHtml(rawHtml);
