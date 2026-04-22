@@ -42,6 +42,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     isTranslating,
     error: translateError,
     targetLang,
+    setTargetLang,
     toggle: toggleTranslation,
     translatedTitle,
     translatedHtml,
@@ -49,7 +50,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     translatedComments,
   } = useTranslation(article, processedHtml, comments);
 
-  // TOC heading要素をキャッシュ（記事変更時はアクティブ見出しもリセット）
+  // TOC heading要素をキャッシュ（記事変更・翻訳切替時はアクティブ見出しもリセット）
   useEffect(() => {
     activeHeadingIdRef.current = '';
     setActiveHeadingId('');
@@ -60,7 +61,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     headingElementsRef.current = tocItems
       .map((item) => contentRef.current?.querySelector(`#${item.id}`))
       .filter(Boolean) as HTMLElement[];
-  }, [processedHtml, tocItems]);
+  }, [processedHtml, tocItems, translatedHtml]);
 
   // TOCのアクティブ項目が見えるように自動スクロール
   useEffect(() => {
@@ -105,11 +106,12 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     });
   };
 
-  // 本文内のQiitaリンクをアプリ内で開く
+  // 本文内のQiita/Dev.toリンクをアプリ内で開く
   useEffect(() => {
     if (!contentRef.current || !processedHtml || !onSelectArticle) return;
     const container = contentRef.current;
-    const qiitaItemRe = /https:\/\/qiita\.com\/[^/]+\/items\/([a-f0-9]+)/;
+    const qiitaItemRe = /^https?:\/\/qiita\.com\/[^/]+\/items\/([a-f0-9]+)/;
+    const devArticleRe = /^https?:\/\/dev\.to\/([^/]+)\/([^/?#]+)/;
 
     const handleLinkClick = (e: MouseEvent) => {
       const anchor = (e.target as HTMLElement).closest('a');
@@ -117,14 +119,27 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
       // target="_blank" のリンク（ヘッダーURLなど）は通常通り外部遷移させる
       if (anchor.target === '_blank') return;
       const href = anchor.getAttribute('href') ?? '';
-      const match = href.match(qiitaItemRe);
-      if (!match) return;
-      e.preventDefault();
-      const itemId = match[1];
-      fetch(`${API_BASE}/qiita/article/${itemId}`)
-        .then(res => { if (!res.ok) throw new Error(); return res.json(); })
-        .then(data => onSelectArticle(data))
-        .catch(() => window.open(href, '_blank', 'noopener,noreferrer'));
+
+      const qiitaMatch = href.match(qiitaItemRe);
+      if (qiitaMatch) {
+        e.preventDefault();
+        fetch(`${API_BASE}/qiita/article/${qiitaMatch[1]}`)
+          .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+          .then(data => onSelectArticle(data))
+          .catch(() => window.open(href, '_blank', 'noopener,noreferrer'));
+        return;
+      }
+
+      const devMatch = href.match(devArticleRe);
+      if (devMatch) {
+        e.preventDefault();
+        const [, username, slug] = devMatch;
+        fetch(`${API_BASE}/dev/article-by-slug/${encodeURIComponent(username)}/${encodeURIComponent(slug)}`)
+          .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+          .then(data => onSelectArticle(data))
+          .catch(() => window.open(href, '_blank', 'noopener,noreferrer'));
+        return;
+      }
     };
 
     container.addEventListener('click', handleLinkClick);
@@ -173,42 +188,77 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
                     <span>{article.url}</span>
                   </a>
 
-                  <button
-                    onClick={toggleTranslation}
-                    disabled={isTranslating}
-                    title={isTranslated ? '原文に戻す' : `${targetLang === 'JA' ? '日本語' : '英語'}に翻訳`}
-                    className={clsx(
-                      'ml-auto flex-shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all',
-                      isTranslated
-                        ? 'bg-indigo-600/30 border-indigo-500/60 text-indigo-300 hover:bg-indigo-600/50'
-                        : 'bg-slate-800/60 border-slate-700/50 text-slate-400 hover:border-indigo-500/50 hover:text-slate-200',
-                      isTranslating && 'opacity-60 cursor-wait',
-                    )}
-                  >
-                    {isTranslating ? (
-                      <>
-                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
-                        </svg>
-                        翻訳中…
-                      </>
-                    ) : isTranslated ? (
-                      <>
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                        </svg>
-                        原文に戻す
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                        </svg>
-                        {targetLang === 'JA' ? '日本語に翻訳' : '英語に翻訳'}
-                      </>
-                    )}
-                  </button>
+                  {/* 翻訳言語トグル + 翻訳ボタン */}
+                  <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                    {/* 国旗トグル */}
+                    <div className="flex items-center rounded-lg border border-slate-700/50 overflow-hidden bg-slate-800/60 text-sm">
+                      <button
+                        onClick={() => setTargetLang('JA')}
+                        disabled={isTranslating}
+                        title="日本語に翻訳"
+                        className={clsx(
+                          'px-2.5 py-1 transition-all',
+                          targetLang === 'JA'
+                            ? 'bg-indigo-600/50 opacity-100'
+                            : 'opacity-40 hover:opacity-70',
+                        )}
+                      >
+                        <span className="fi fi-jp" style={{ width: '1.25rem', height: '0.9375rem', display: 'inline-block', backgroundSize: 'cover' }} />
+                      </button>
+                      <div className="w-px h-4 bg-slate-700/60" />
+                      <button
+                        onClick={() => setTargetLang('EN')}
+                        disabled={isTranslating}
+                        title="英語に翻訳"
+                        className={clsx(
+                          'px-2.5 py-1 transition-all',
+                          targetLang === 'EN'
+                            ? 'bg-indigo-600/50 opacity-100'
+                            : 'opacity-40 hover:opacity-70',
+                        )}
+                      >
+                        <span className="fi fi-us" style={{ width: '1.25rem', height: '0.9375rem', display: 'inline-block', backgroundSize: 'cover' }} />
+                      </button>
+                    </div>
+
+                    {/* 翻訳ボタン */}
+                    <button
+                      onClick={toggleTranslation}
+                      disabled={isTranslating}
+                      title={isTranslated ? '原文に戻す' : `${targetLang === 'JA' ? '日本語' : '英語'}に翻訳`}
+                      className={clsx(
+                        'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all',
+                        isTranslated
+                          ? 'bg-indigo-600/30 border-indigo-500/60 text-indigo-300 hover:bg-indigo-600/50'
+                          : 'bg-slate-800/60 border-slate-700/50 text-slate-400 hover:border-indigo-500/50 hover:text-slate-200',
+                        isTranslating && 'opacity-60 cursor-wait',
+                      )}
+                    >
+                      {isTranslating ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                          </svg>
+                          翻訳中…
+                        </>
+                      ) : isTranslated ? (
+                        <>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                          原文に戻す
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                          </svg>
+                          {targetLang === 'JA' ? '日本語に翻訳' : '英語に翻訳'}
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
           </div>
             </div>

@@ -28,6 +28,7 @@ const styles = {
 
 export interface ArticleViewHandle {
   viewUserArticles: (userId: string, name: string, profileImage: string, source: 'qiita' | 'dev') => void;
+  searchByTag: (tag: string) => void;
 }
 
 const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: Article) => void }>(
@@ -42,6 +43,7 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
   const [loading, setLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const articlesRef = useRef<Article[]>([]);
+  const isTagSearchRef = useRef(false);
 
   useEffect(() => {
     articlesRef.current = articles;
@@ -165,7 +167,30 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
     }
   }, []);
 
-  useImperativeHandle(ref, () => ({ viewUserArticles }), [viewUserArticles]);
+  const searchByTag = React.useCallback((tag: string) => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    isTagSearchRef.current = true; // resetState をスキップさせる
+    setUserView(null);
+    setActiveMain('qiita');
+    setActiveSub('search');
+    setKeyword(tag);
+    setSort('rel');
+    setPeriod('all');
+    setHasSearched(true);
+    setLoading(true);
+    setArticles([]);
+    // Qiita の tag: 構文で完全一致タグ検索
+    const url = `${API_BASE}/qiita/search?keyword=${encodeURIComponent('tag:' + tag)}&sort=rel&period=all`;
+    fetch(url, { signal: abortController.signal })
+      .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+      .then(data => setArticles(Array.isArray(data) ? data : []))
+      .catch(() => setArticles([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useImperativeHandle(ref, () => ({ viewUserArticles, searchByTag }), [viewUserArticles, searchByTag]);
 
 
   const exitUserView = () => {
@@ -200,6 +225,10 @@ const ArticleView = React.forwardRef<ArticleViewHandle, { onSelectArticle: (a: A
   const showSimpleGo = (activeMain === 'qiita' || activeMain === 'dev') && activeSub === 'timeline';
 
   useEffect(() => {
+    if (isTagSearchRef.current) {
+      isTagSearchRef.current = false;
+      return;
+    }
     resetState();
   }, [activeMain, activeSub]);
 

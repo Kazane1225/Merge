@@ -29,4 +29,13 @@ public class QiitaItem {
     private List<QiitaCommentItem> qiitaComments;
 
     private QiitaUserItem user;
+
+    private List<Tag> tags;
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @Data
+    public static class Tag {
+        private String name;
+        private List<String> versions;
+    }
 }

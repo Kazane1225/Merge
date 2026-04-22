@@ -11,6 +11,7 @@ public interface DevService {
     List<DevItem> getHotArticles(String period);
     List<DevItem> getTimelineArticles();
     DevItem getArticleDetail(String itemId);
+    DevItem getArticleBySlug(String username, String slug);
     List<DevCommentItem> getArticleComments(String itemId);
     List<DevItem> getUserArticles(String username);
 }

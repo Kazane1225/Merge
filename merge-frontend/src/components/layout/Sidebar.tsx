@@ -8,6 +8,7 @@ import type { Article } from '../../types/article';
 
 export interface SidebarHandle {
   viewUserArticles: (userId: string, name: string, profileImage: string, source: 'qiita' | 'dev') => void;
+  searchByTag: (tag: string) => void;
 }
 
 interface SidebarProps {
@@ -26,6 +27,9 @@ const Sidebar = React.forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
     viewUserArticles(userId, name, profileImage, source) {
       articleViewRef.current?.viewUserArticles(userId, name, profileImage, source);
     },
+    searchByTag(tag) {
+      articleViewRef.current?.searchByTag(tag);
+    },
   }));
 
   return (
@@ -34,9 +38,18 @@ const Sidebar = React.forwardRef<SidebarHandle, SidebarProps>(function Sidebar(
       open ? 'w-80' : 'w-0 overflow-hidden'
     )}>
       <div className="h-14 flex items-center justify-between px-5 border-b border-slate-800">
-        <h1 className="text-lg font-mono font-bold text-indigo-400">
-          <span className="text-slate-500 mr-2">$</span>Merge_
-        </h1>
+        <div className="flex items-center gap-2.5">
+          <svg className="w-6 h-6 flex-shrink-0" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="sidebar-logo-grad" x1="4" y1="8" x2="28" y2="26" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#818cf8" />
+                <stop offset="100%" stopColor="#a855f7" />
+              </linearGradient>
+            </defs>
+            <path d="M4 26 L4 8 L16 20 L28 8 L28 26" stroke="url(#sidebar-logo-grad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="text-base font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Merge</span>
+        </div>
         <button
           onClick={onClose}
           className="p-2 hover:bg-slate-700 rounded transition-colors"

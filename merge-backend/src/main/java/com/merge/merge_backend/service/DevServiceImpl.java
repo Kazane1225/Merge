@@ -118,6 +118,24 @@ public class DevServiceImpl implements DevService {
     }
 
     @Override
+    public DevItem getArticleBySlug(String username, String slug) {
+        URI uri = UriComponentsBuilder.fromUriString(BASE_URL + "/{username}/{slug}")
+                .buildAndExpand(username, slug).toUri();
+        log.debug("[Dev.to] GET article by slug {}/{}", username, slug);
+        try {
+            DevItem item = restClient.get().uri(uri).retrieve().body(DevItem.class);
+            return item != null ? item : new DevItem();
+        } catch (RestClientResponseException e) {
+            log.warn("[Dev.to] HTTP {} fetching article {}/{}: {}",
+                    e.getStatusCode(), username, slug, e.getResponseBodyAsString(StandardCharsets.UTF_8));
+            return new DevItem();
+        } catch (Exception e) {
+            log.error("[Dev.to] Error fetching article {}/{}: {}", username, slug, e.getMessage());
+            return new DevItem();
+        }
+    }
+
+    @Override
     public List<DevCommentItem> getArticleComments(String itemId) {
         URI uri = UriComponentsBuilder.fromUriString(BASE_COMMENT_URL)
                 .queryParam("a_id", "{id}")

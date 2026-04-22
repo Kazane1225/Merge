@@ -222,6 +222,36 @@ class DevControllerTest {
                 .andExpect(jsonPath("$").isEmpty());
     }
 
+    // ─── GET /api/dev/article-by-slug/{username}/{slug} ───────────────
+
+    @Test
+    void getArticleBySlug_returnsItemByUsernameAndSlug() throws Exception {
+        // データ作成
+        DevItem item = devItem("99", "Slug Article Title");
+        // モック化
+        when(devService.getArticleBySlug("alice", "my-article")).thenReturn(item);
+
+        // 実行
+        mockMvc.perform(get("/api/dev/article-by-slug/alice/my-article"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("99"))
+                .andExpect(jsonPath("$.title").value("Slug Article Title"));
+
+        // 呼び出し検証
+        verify(devService).getArticleBySlug("alice", "my-article");
+    }
+
+    @Test
+    void getArticleBySlug_onError_returnsEmptyItem() throws Exception {
+        // モック化：空のDevItemを返す
+        when(devService.getArticleBySlug("unknown", "not-found")).thenReturn(new DevItem());
+
+        // 実行：idがnullのアイテムが返る
+        mockMvc.perform(get("/api/dev/article-by-slug/unknown/not-found"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").doesNotExist());
+    }
+
     // ─── ヘルパー ─────────────────────────────────────────────────
 
     private DevItem devItem(String id, String title) {

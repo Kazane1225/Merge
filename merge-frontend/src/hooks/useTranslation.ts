@@ -31,6 +31,7 @@ export interface UseTranslationResult {
   isTranslating: boolean;
   error: string | null;
   targetLang: 'JA' | 'EN';
+  setTargetLang: (lang: 'JA' | 'EN') => void;
   toggle: () => void;
   translatedTitle: string | null;
   translatedHtml: string | null;
@@ -46,17 +47,33 @@ export function useTranslation(
   const [isTranslated, setIsTranslated] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cache, setCache] = useState<TranslationCache | null>(null);
+  // 言語ごとにキャッシュを保持（切り替え時に再フェッチ不要）
+  const [caches, setCaches] = useState<Partial<Record<'JA' | 'EN', TranslationCache>>>({});
 
   // 記事が切り替わったらリセット
   useEffect(() => {
     setIsTranslated(false);
-    setCache(null);
+    setCaches({});
     setError(null);
   }, [article?.url]);
 
-  // Qiita → 英語へ翻訳、それ以外 → 日本語へ翻訳
-  const targetLang: 'JA' | 'EN' = article?.url?.includes('qiita.com') ? 'EN' : 'JA';
+  // デフォルト: Qiita → 英語へ翻訳、それ以外 → 日本語へ翻訳
+  const defaultLang: 'JA' | 'EN' = article?.url?.includes('qiita.com') ? 'EN' : 'JA';
+  const [targetLang, setTargetLangState] = useState<'JA' | 'EN'>(defaultLang);
+
+  // 記事が変わったらデフォルト言語に戻す
+  useEffect(() => {
+    setTargetLangState(defaultLang);
+  }, [article?.url]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setTargetLang = (lang: 'JA' | 'EN') => {
+    if (lang === targetLang) return;
+    setTargetLangState(lang);
+    // 翻訳表示中なら対象言語のキャッシュに切り替え（なければ原文に戻す）
+    if (isTranslated) {
+      setIsTranslated(!!caches[lang]);
+    }
+  };
 
   const toggle = async () => {
     if (isTranslated) {
@@ -64,7 +81,7 @@ export function useTranslation(
       return;
     }
     // キャッシュがあればそのまま表示
-    if (cache) {
+    if (caches[targetLang]) {
       setIsTranslated(true);
       return;
     }
@@ -102,12 +119,13 @@ export function useTranslation(
         return { ...(c as DevComment), body_html: body };
       });
 
-      setCache({
+      const newCache: TranslationCache = {
         title: transTitle ?? '',
         html: transHtml,
         tocItems: extractTocFromHtml(transHtml),
         comments: translatedComments as QiitaComment[] | DevComment[],
-      });
+      };
+      setCaches(prev => ({ ...prev, [targetLang]: newCache }));
       setIsTranslated(true);
     } catch {
       setError('翻訳に失敗しました。しばらく経ってから再試行してください。');
@@ -116,15 +134,18 @@ export function useTranslation(
     }
   };
 
+  const activeCache = caches[targetLang] ?? null;
+
   return {
     isTranslated,
     isTranslating,
     error,
     targetLang,
+    setTargetLang,
     toggle,
-    translatedTitle: isTranslated ? (cache?.title ?? null) : null,
-    translatedHtml: isTranslated ? (cache?.html ?? null) : null,
-    translatedTocItems: isTranslated ? (cache?.tocItems ?? null) : null,
-    translatedComments: isTranslated ? (cache?.comments ?? null) : null,
+    translatedTitle: isTranslated ? (activeCache?.title ?? null) : null,
+    translatedHtml: isTranslated ? (activeCache?.html ?? null) : null,
+    translatedTocItems: isTranslated ? (activeCache?.tocItems ?? null) : null,
+    translatedComments: isTranslated ? (activeCache?.comments ?? null) : null,
   };
 }

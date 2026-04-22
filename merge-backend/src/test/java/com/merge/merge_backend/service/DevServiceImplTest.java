@@ -321,6 +321,30 @@ class DevServiceImplTest {
         mockServer.verify();
     }
 
+    @Test
+    void getArticleBySlug_callsCorrectUrlAndReturnsItem() {
+        mockServer.expect(requestTo(containsString("/articles/alice/my-article")))
+                .andRespond(withSuccess("{\"id\":\"99\",\"title\":\"Slug Article\"}", MediaType.APPLICATION_JSON));
+
+        DevItem result = service.getArticleBySlug("alice", "my-article");
+
+        assertThat(result.getId()).isEqualTo("99");
+        assertThat(result.getTitle()).isEqualTo("Slug Article");
+        mockServer.verify();
+    }
+
+    @Test
+    void getArticleBySlug_onError_returnsEmptyItem() {
+        mockServer.expect(requestTo(anything()))
+                .andRespond(withServerError());
+
+        DevItem result = service.getArticleBySlug("unknown", "not-found");
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isNull();
+        mockServer.verify();
+    }
+
     private static String devItemArray(Object... idAndLikes) {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < idAndLikes.length; i += 2) {

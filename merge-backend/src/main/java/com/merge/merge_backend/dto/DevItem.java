@@ -62,10 +62,12 @@ public class DevItem {
     /**
      * list endpoint: tag_list は配列 ["java","spring"]
      * detail endpoint: tag_list は文字列 "java, spring"
-     * どちらも List<String> に変換する
+     * どちらも List<String> に変換する。
+     * JSON出力は "tags" キーで返す（フロントエンドの Article.tags と一致させるため）
      */
     @JsonDeserialize(using = FlexibleTagListDeserializer.class)
-    @JsonProperty("tag_list")
+    @JsonAlias("tag_list")
+    @JsonProperty("tags")
     private List<String> tagList;
 
     public static class FlexibleTagListDeserializer extends StdDeserializer<List<String>> {

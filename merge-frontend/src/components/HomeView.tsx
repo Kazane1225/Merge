@@ -7,12 +7,13 @@ import { getArticleSource, getBadgeClasses, getSourceLabel } from '../lib/articl
 
 type Period = '1day' | 'week' | 'month';
 
-const FEED_LIMIT = 15;
-const RANKING_LIMIT = 20;
+const FEED_LIMIT = 20;
+const RANKING_LIMIT = 40;
 
 interface HomeViewProps {
   onSelectArticle: (article: Article) => void;
   onOpenSearch: () => void;
+  onSearchTag?: (tag: string) => void;
   history: HistoryEntry[];
   className?: string;
 }
@@ -42,6 +43,21 @@ function getTagNames(tags?: (QiitaTag | string)[]): string[] {
   return tags.slice(0, 3).map(t => (typeof t === 'string' ? t : t.name));
 }
 
+function aggregateTags(articles: Article[]): { name: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const a of articles) {
+    if (!a.tags) continue;
+    for (const t of a.tags) {
+      const name = typeof t === 'string' ? t : t.name;
+      if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20);
+}
+
 function formatDate(dateStr?: string) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -56,7 +72,7 @@ function formatDate(dateStr?: string) {
   return d.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
 }
 
-function ArticleCard({ article, onSelect }: { article: Article; onSelect: () => void }) {
+function ArticleCard({ article, onSelect, onSearchTag }: { article: Article; onSelect: () => void; onSearchTag?: (tag: string) => void }) {
   const source = getArticleSource(article);
   const date = article.created_at ?? article.published_at;
   const likes = article.likes_count ?? article.likesCount ?? 0;
@@ -95,7 +111,11 @@ function ArticleCard({ article, onSelect }: { article: Article; onSelect: () => 
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {tags.map(tag => (
-              <span key={tag} className={`text-[10px] px-2 py-0.5 rounded border font-medium ${tagColor(tag)}`}>#{tag}</span>
+              <button
+                key={tag}
+                onClick={(e) => { e.stopPropagation(); onSearchTag?.(tag); }}
+                className={`text-[10px] px-2 py-0.5 rounded border font-medium ${tagColor(tag)} ${onSearchTag ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
+              >#{tag}</button>
             ))}
           </div>
         )}
@@ -103,6 +123,69 @@ function ArticleCard({ article, onSelect }: { article: Article; onSelect: () => 
           <div className="flex items-center gap-1 text-xs text-slate-500">
             <span className="text-pink-400">♥</span>
             <span>{likes.toLocaleString()}</span>
+          </div>
+          <span className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase ${getBadgeClasses(source)}`}>
+            {getSourceLabel(source)}
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// ── Hero card (larger, for Today's Pickup section) ─────────────
+
+function HeroCard({ article, onSelect, onSearchTag }: { article: Article; onSelect: () => void; onSearchTag?: (tag: string) => void }) {
+  const source = getArticleSource(article);
+  const date = article.created_at ?? article.published_at;
+  const likes = article.likes_count ?? article.likesCount ?? 0;
+  const cover = article.cover_image ?? article.coverImage;
+  const avatar = article.user?.profile_image_url ?? article.user?.profile_image;
+  const authorName = article.user?.name ?? article.user?.username ?? article.user?.login ?? 'Unknown';
+  const tags = getTagNames(article.tags);
+
+  return (
+    <article
+      onClick={onSelect}
+      className="group cursor-pointer bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/50 hover:border-indigo-500/70 rounded-2xl overflow-hidden transition-all duration-200 shadow-lg hover:shadow-xl hover:shadow-indigo-500/15 hover:-translate-y-0.5"
+    >
+      {cover ? (
+        <div className="h-44 overflow-hidden bg-slate-900">
+          <img src={cover} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        </div>
+      ) : (
+        <div className="h-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-500" />
+      )}
+      <div className="p-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          {avatar ? (
+            <img src={avatar} alt={authorName} className="w-7 h-7 rounded-full flex-shrink-0 object-cover ring-1 ring-slate-600" />
+          ) : (
+            <div className="w-7 h-7 rounded-full flex-shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
+              {authorName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span className="text-xs text-slate-400 truncate font-medium">{authorName}</span>
+          {date && <span className="text-xs text-slate-600 flex-shrink-0 ml-auto">{formatDate(date)}</span>}
+        </div>
+        <h3 className="text-base font-bold text-slate-100 group-hover:text-indigo-300 transition-colors leading-snug line-clamp-2">
+          {article.title}
+        </h3>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {tags.map(tag => (
+              <button
+                key={tag}
+                onClick={(e) => { e.stopPropagation(); onSearchTag?.(tag); }}
+                className={`text-[10px] px-2 py-0.5 rounded border font-medium ${tagColor(tag)} ${onSearchTag ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
+              >#{tag}</button>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-1.5 text-sm text-slate-400">
+            <span className="text-pink-400">♥</span>
+            <span className="font-semibold">{likes.toLocaleString()}</span>
           </div>
           <span className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase ${getBadgeClasses(source)}`}>
             {getSourceLabel(source)}
@@ -177,12 +260,13 @@ function HistoryCard({ article, onSelect }: { article: Article; onSelect: () => 
 
 // ── Trend section for a single source ─────────────────────────
 
-function TrendSection({ label, badgeClass, articles, loading, onSelect }: {
+function TrendSection({ label, badgeClass, articles, loading, onSelect, onSearchTag }: {
   label: string;
   badgeClass: string;
   articles: Article[];
   loading: boolean;
   onSelect: (a: Article) => void;
+  onSearchTag?: (tag: string) => void;
 }) {
   return (
     <section>
@@ -191,19 +275,63 @@ function TrendSection({ label, badgeClass, articles, loading, onSelect }: {
         {!loading && <span className="text-xs text-slate-600">{articles.length}件</span>}
       </div>
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
       ) : articles.length === 0 ? (
         <p className="text-sm text-slate-600 py-8 text-center">記事が見つかりません</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {articles.map(a => (
-            <ArticleCard key={a.id} article={a} onSelect={() => onSelect(a)} />
+            <ArticleCard key={a.id} article={a} onSelect={() => onSelect(a)} onSearchTag={onSearchTag} />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+// ── Tag cloud panel (left side) ─────────────────────────────
+
+function TagCloudPanel({ articles, loading, onSearchTag }: {
+  articles: Article[];
+  loading: boolean;
+  onSearchTag?: (tag: string) => void;
+}) {
+  const topTags = useMemo(() => aggregateTags(articles), [articles]);
+  const maxCount = topTags[0]?.count ?? 1;
+
+  return (
+    <aside className="hidden xl:flex w-52 flex-shrink-0 flex-col py-6 px-4 overflow-y-auto border-r border-slate-800/60 custom-scrollbar">
+      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3"># 人気タグ</p>
+      {loading ? (
+        <div className="flex flex-wrap gap-1.5">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="h-5 rounded animate-pulse bg-slate-700/40" style={{ width: `${48 + (i % 4) * 16}px` }} />
+          ))}
+        </div>
+      ) : topTags.length === 0 ? (
+        <p className="text-xs text-slate-600">データを読み込み中…</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {topTags.map(({ name, count }) => {
+            const weight = count / maxCount;
+            const opacity = 0.55 + weight * 0.45;
+            return (
+              <button
+                key={name}
+                onClick={() => onSearchTag?.(name)}
+                style={{ opacity }}
+                className={`text-[10px] px-2 py-0.5 rounded border font-medium transition-all hover:opacity-100 hover:scale-105 ${tagColor(name)}`}
+                title={`${count}件の記事`}
+              >
+                #{name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -268,7 +396,7 @@ function RankingPanel({ articles, loading, onSelect }: {
 
 // ── Main ──────────────────────────────────────────────────────
 
-export default function HomeView({ onSelectArticle, onOpenSearch, history, className = '' }: HomeViewProps) {
+export default function HomeView({ onSelectArticle, onOpenSearch, onSearchTag, history, className = '' }: HomeViewProps) {
   const [period, setPeriod] = useState<Period>('week');
   const [qiitaArticles, setQiitaArticles] = useState<Article[]>([]);
   const [devArticles, setDevArticles] = useState<Article[]>([]);
@@ -299,6 +427,18 @@ export default function HomeView({ onSelectArticle, onOpenSearch, history, class
     [qiitaArticles, devArticles],
   );
 
+  // 今日のピックアップ: 日付シードでtop10から毎日3件を選抜
+  const pickupArticles = useMemo(() => {
+    const pool = [...mergedRanking]
+      .sort((a, b) => (b.likes_count ?? b.likesCount ?? 0) - (a.likes_count ?? a.likesCount ?? 0))
+      .slice(0, 10);
+    if (pool.length < 3) return pool;
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const i = seed % (pool.length - 2);
+    return [pool[i], pool[(i + 1) % pool.length], pool[(i + 2) % pool.length]];
+  }, [mergedRanking]);
+
   const loading = loadingQiita || loadingDev;
 
   // Deduplicated recent history
@@ -313,15 +453,30 @@ export default function HomeView({ onSelectArticle, onOpenSearch, history, class
 
   return (
     <div className={`flex h-full overflow-hidden bg-[#0B1120] ${className}`}>
+      {/* ── Left tag cloud panel ── */}
+      <TagCloudPanel articles={mergedRanking} loading={loading} onSearchTag={onSearchTag} />
       {/* ── Main feed (scrollable) ── */}
       <main className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-4xl w-full mx-auto px-6 py-8 flex flex-col gap-8">
 
           {/* ── Hero + Search ── */}
           <div className="flex flex-col items-center gap-4 pt-4 pb-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-lg font-black text-white shadow-lg shadow-indigo-500/30">M</div>
-              <h1 className="text-2xl font-bold text-slate-100">Merge</h1>
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-indigo-500/25 blur-2xl scale-150" />
+                <svg className="relative w-16 h-16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="home-logo-grad" x1="4" y1="8" x2="28" y2="26" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#818cf8" />
+                      <stop offset="100%" stopColor="#a855f7" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M4 26 L4 8 L16 20 L28 8 L28 26" stroke="url(#home-logo-grad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                Merge
+              </h1>
             </div>
             <p className="text-sm text-slate-500">記事と知見を、ひとつにマージする</p>
             <button
@@ -334,6 +489,20 @@ export default function HomeView({ onSelectArticle, onOpenSearch, history, class
               記事を検索…
             </button>
           </div>
+
+          {/* ── Today's Pickup ── */}
+          {!loading && pickupArticles.length >= 2 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold text-amber-400">✦ 今日のピックアップ</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {pickupArticles.map(a => (
+                  <HeroCard key={`pickup-${getArticleSource(a)}-${a.id}`} article={a} onSelect={() => onSelectArticle(a)} onSearchTag={onSearchTag} />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* ── Recent History ── */}
           {recentHistory.length > 0 && (
@@ -378,6 +547,7 @@ export default function HomeView({ onSelectArticle, onOpenSearch, history, class
             articles={qiitaArticles}
             loading={loadingQiita}
             onSelect={onSelectArticle}
+            onSearchTag={onSearchTag}
           />
 
           {/* ── Dev.to Trends ── */}
@@ -387,6 +557,7 @@ export default function HomeView({ onSelectArticle, onOpenSearch, history, class
             articles={devArticles}
             loading={loadingDev}
             onSelect={onSelectArticle}
+            onSearchTag={onSearchTag}
           />
 
         </div>

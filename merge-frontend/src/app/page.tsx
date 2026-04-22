@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from "react";
+import { flushSync } from "react-dom";
 import Sidebar from "../components/layout/Sidebar";
 import type { SidebarHandle } from "../components/layout/Sidebar";
 import AppHeader from "../components/layout/AppHeader";
@@ -96,6 +97,15 @@ export default function Home() {
     setViewMode('normal');
   };
 
+  // タグクリック時: flushSyncでSidebarを同期的にマウントしてからタグ検索を実行
+  const handleSearchTag = (tag: string) => {
+    flushSync(() => {
+      setSidebarOpen(true);
+      setViewMode('normal');
+    });
+    sidebarRef.current?.searchByTag(tag);
+  };
+
   return (
     <div
       className="app-shell flex h-screen w-full bg-[#0B1120] text-slate-300 font-sans selection:bg-indigo-500/30"
@@ -149,6 +159,7 @@ export default function Home() {
                 onSelectArticle={openTab}
                 onHistorySelect={handleSelectArticle}
                 onOpenSearch={handleOpenSearch}
+                onSearchTag={handleSearchTag}
                 setViewMode={setViewMode}
                 splitRatio={splitRatio}
                 onSplitResizerMouseDown={handleSplitResizerMouseDown}

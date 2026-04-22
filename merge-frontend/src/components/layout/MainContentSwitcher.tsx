@@ -19,6 +19,7 @@ interface MainContentSwitcherProps {
   onSelectArticle: (article: Article) => void;
   onHistorySelect: (article: Article) => void;
   onOpenSearch: () => void;
+  onSearchTag?: (tag: string) => void;
   setViewMode: (mode: ViewMode) => void;
   splitRatio?: number;
   onSplitResizerMouseDown?: () => void;
@@ -34,12 +35,13 @@ export default function MainContentSwitcher({
   onSelectArticle,
   onHistorySelect,
   onOpenSearch,
+  onSearchTag,
   setViewMode,
   splitRatio = 0.5,
   onSplitResizerMouseDown,
 }: MainContentSwitcherProps) {
   if (viewMode === 'home') {
-    return <HomeView onSelectArticle={onHistorySelect} onOpenSearch={onOpenSearch} history={history} className="flex-1" />;
+    return <HomeView onSelectArticle={onHistorySelect} onOpenSearch={onOpenSearch} onSearchTag={onSearchTag} history={history} className="flex-1" />;
   }
 
   if (viewMode === 'history') {
