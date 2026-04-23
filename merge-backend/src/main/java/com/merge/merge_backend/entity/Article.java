@@ -1,7 +1,9 @@
 package com.merge.merge_backend.entity;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -62,6 +64,37 @@ public class Article extends BaseEntity {
 
     @Column(name = "user_profile_image_url", columnDefinition = "TEXT")
     private String userProfileImageUrl;
+
+    // タグ（カンマ区切りで保存。Qiita: {name} オブジェクト / Dev.to: 文字列 のどちらも受け取れる）
+    @Column(name = "tags", columnDefinition = "TEXT")
+    private String tagsRaw;
+
+    @Transient
+    @JsonProperty("tags")
+    public List<String> getTags() {
+        if (tagsRaw == null || tagsRaw.isBlank()) return null;
+        return Arrays.asList(tagsRaw.split(",", -1));
+    }
+
+    @JsonProperty("tags")
+    @SuppressWarnings("unchecked")
+    public void setTags(List<Object> tags) {
+        if (tags == null || tags.isEmpty()) {
+            this.tagsRaw = null;
+            return;
+        }
+        this.tagsRaw = tags.stream()
+            .map(t -> {
+                if (t instanceof String) return (String) t;
+                if (t instanceof Map) {
+                    Object name = ((Map<?, ?>) t).get("name");
+                    return name != null ? name.toString() : null;
+                }
+                return t.toString();
+            })
+            .filter(s -> s != null && !s.isBlank())
+            .collect(Collectors.joining(","));
+    }
 
     @Transient
     @JsonProperty("user")

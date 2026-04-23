@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { flushSync } from "react-dom";
+import { House, Search, History, BookMarked, type LucideIcon } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
 import type { SidebarHandle } from "../components/layout/Sidebar";
 import AppHeader from "../components/layout/AppHeader";
@@ -16,7 +17,14 @@ import { useTabManager } from "../hooks/useTabManager";
 import { useResizer } from "../hooks/useResizer";
 import ErrorBoundary from "../components/ErrorBoundary";
 
-type ViewMode = 'home' | 'normal' | 'history' | 'graph';
+type ViewMode = 'home' | 'normal' | 'history' | 'library';
+
+const LEFT_NAV_ITEMS: { mode: ViewMode; icon: LucideIcon; label: string }[] = [
+  { mode: 'home', icon: House, label: 'ホーム' },
+  { mode: 'normal', icon: Search, label: '検索' },
+  { mode: 'history', icon: History, label: '履歴' },
+  { mode: 'library', icon: BookMarked, label: 'ライブラリ' },
+];
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -113,6 +121,28 @@ export default function Home() {
       onMouseUp={handleGlobalMouseUp}
       onMouseLeave={handleGlobalMouseUp}
     >
+      <aside className="w-16 sm:w-20 flex flex-col items-center gap-3 border-r border-slate-800 bg-[#0A1020] py-4">
+        {LEFT_NAV_ITEMS.map(({ mode, icon: Icon, label }) => {
+          const active = viewMode === mode;
+          return (
+            <button
+              key={mode}
+              onClick={() => handleViewModeChange(mode)}
+              className={[
+                'w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex flex-col items-center justify-center text-xs transition-all',
+                active
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60',
+              ].join(' ')}
+              title={label}
+            >
+              <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={2} />
+              <span className="mt-1 text-[10px]">{label}</span>
+            </button>
+          );
+        })}
+      </aside>
+
       {/* Left Sidebar — ホーム画面では非表示 */}
       {viewMode !== 'home' && (
         <Sidebar
@@ -127,9 +157,7 @@ export default function Home() {
         <AppHeader
           sidebarOpen={sidebarOpen}
           selectedArticleTitle={selectedArticle?.title ?? null}
-          viewMode={viewMode}
           onToggleSidebar={() => setSidebarOpen(true)}
-          onViewModeChange={handleViewModeChange}
         />
 
         {tabs.length > 0 && viewMode === 'normal' && (
@@ -191,8 +219,8 @@ export default function Home() {
             )}
           </div>
 
-          {/* メモペイン — ホーム画面では非表示 */}
-          {viewMode !== 'home' && (
+          {/* メモペイン — 検索/記事表示モードのみ */}
+          {viewMode === 'normal' && (
             <MemoPane
               selectedArticle={selectedArticle}
               memoWidth={memoWidth}
@@ -204,8 +232,8 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Mobile Memo Editor — ホーム画面では非表示 */}
-      {viewMode !== 'home' && (
+      {/* Mobile Memo Editor — 検索/記事表示モードのみ */}
+      {viewMode === 'normal' && (
         <aside className="lg:hidden w-full h-96 flex-shrink-0 flex flex-col border-t border-slate-800 bg-[#0F172A] z-20">
           <MemoEditor targetArticle={selectedArticle} onArticleSaved={updateArticle} />
         </aside>

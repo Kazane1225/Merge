@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import clsx from 'clsx';
 import { getArticleSource } from "../lib/articleHelpers";
 import { ArticleTab, HistoryEntry, Article } from "../types/article";
@@ -11,6 +11,122 @@ const styles = {
   edgeKeyword: "text-xs px-2 py-0.5 bg-indigo-900/50 text-indigo-200 border border-indigo-700/50 rounded",
   edgeTooltip: "absolute bg-slate-900/95 backdrop-blur border border-indigo-500/50 rounded-lg p-3 pointer-events-none shadow-xl",
 };
+
+// ─── 純粋関数・定数 ─── コンポーネント外で定義して毎レンダーの再生成を防ぐ ───
+
+const TECH_TERM_ALIASES: Record<string, string[]> = {
+  typescript: ['typescript', 'type script'],
+  javascript: ['javascript', 'ecmascript'],
+  python: ['python'],
+  java: ['java'],
+  'c++': ['c++', 'cpp'],
+  'c#': ['c#', 'csharp'],
+  golang: ['golang', 'go言語'],
+  rust: ['rust'],
+  kotlin: ['kotlin'],
+  swift: ['swift'],
+  php: ['php'],
+  ruby: ['ruby'],
+  react: ['react', 'reactjs', 'react.js'],
+  nextjs: ['next.js', 'nextjs'],
+  vue: ['vue', 'vue.js', 'vuejs'],
+  angular: ['angular'],
+  nodejs: ['node.js', 'nodejs'],
+  spring: ['spring', 'spring boot', 'springboot'],
+  django: ['django'],
+  flask: ['flask'],
+  fastapi: ['fastapi', 'fast api'],
+  api: ['api', 'rest', 'restful', 'graphql'],
+  database: ['database', 'データベース'],
+  sql: ['sql', 'postgresql', 'postgres', 'mysql', 'sqlite', 'sqlserver'],
+  nosql: ['nosql', 'mongodb', 'redis', 'cassandra'],
+  docker: ['docker', 'コンテナ'],
+  kubernetes: ['kubernetes', 'k8s'],
+  devops: ['devops', 'ci/cd', 'continuous integration', 'continuous delivery'],
+  aws: ['aws', 'amazon web services'],
+  gcp: ['gcp', 'google cloud'],
+  azure: ['azure'],
+  linux: ['linux', 'unix'],
+  git: ['git', 'github', 'gitlab'],
+  security: ['security', 'セキュリティ', 'oauth', 'jwt', '認証', '認可'],
+  algorithm: ['algorithm', 'アルゴリズム'],
+  datastructure: ['data structure', 'データ構造'],
+  ai: ['人工知能', 'machine learning', 'deep learning', 'llm'],
+  frontend: ['frontend', 'フロントエンド'],
+  backend: ['backend', 'バックエンド'],
+  network: ['network', 'ネットワーク', 'tcp/ip', 'http', 'https'],
+  testing: ['test', 'testing', 'テスト', 'tdd', 'jest', 'pytest'],
+  architecture: ['architecture', '設計', 'アーキテクチャ', 'microservices', 'マイクロサービス'],
+};
+
+const GENERIC_EN_STOPWORDS = new Set([
+  'this', 'that', 'these', 'those', 'when', 'where', 'what', 'which', 'just', 'like', 'very',
+  'have', 'has', 'had', 'will', 'would', 'could', 'should', 'there', 'their', 'then', 'than',
+  'about', 'after', 'before', 'into', 'over', 'under', 'with', 'from', 'using', 'used', 'example',
+]);
+
+// DOM 生成なしで HTML タグを除去（主要なボトルネックだった処理を正規表現に置換）
+function extractText(html: string): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function countOccurrences(text: string, term: string): number {
+  if (!term) return 0;
+  const hasJapanese = /[\u3040-\u30FF\u4E00-\u9FFF]/.test(term);
+  const pattern = hasJapanese
+    ? new RegExp(escapeRegExp(term), 'gi')
+    : new RegExp(`\\b${escapeRegExp(term)}\\b`, 'gi');
+  return (text.match(pattern) || []).length;
+}
+
+function extractKeywords(text: string): string[] {
+  const normalized = text.toLowerCase();
+  const scores = new Map<string, number>();
+
+  Object.entries(TECH_TERM_ALIASES).forEach(([canonical, aliases]) => {
+    const occurrences = aliases.reduce((sum, alias) => sum + countOccurrences(normalized, alias.toLowerCase()), 0);
+    if (occurrences > 0) {
+      scores.set(canonical, occurrences * (1 + Math.log(canonical.length + 1)));
+    }
+  });
+
+  const techSignals = ['api', 'sql', 'http', 'auth', 'cache', 'cloud', 'infra', 'deploy', 'server', 'client', 'model'];
+  const tokenCandidates = normalized.match(/\b[a-z][a-z0-9+#.-]{3,}\b/g) || [];
+  tokenCandidates.forEach(token => {
+    if (GENERIC_EN_STOPWORDS.has(token)) return;
+    if (!techSignals.some(signal => token.includes(signal))) return;
+    if (token.length < 4 || scores.has(token)) return;
+    scores.set(token, 0.8);
+  });
+
+  return Array.from(scores.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 50)
+    .map(([keyword]) => keyword);
+}
+
+function getNodeColor(source: string): string {
+  switch (source) {
+    case 'qiita': return '#10b981';
+    case 'dev': return '#a855f7';
+    case 'database': return '#3b82f6';
+    default: return '#64748b';
+  }
+}
+
+function getNodeStroke(source: string): string {
+  switch (source) {
+    case 'qiita': return '#059669';
+    case 'dev': return '#7c3aed';
+    case 'database': return '#2563eb';
+    default: return '#475569';
+  }
+}
 
 interface GraphViewProps {
   tabs: ArticleTab[];
@@ -32,6 +148,25 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  // ─── キャッシュ済みテキスト（記事ごとに一度だけ抽出）───
+  const articleTextCache = useMemo(() => {
+    const cache = new Map<string, string>();
+    dbArticles.forEach((a, idx) => {
+      const key = String(a.id ?? a.url ?? idx);
+      cache.set(key, extractText(a.rendered_body || a.body_html || '') + ' ' + (a.title || ''));
+    });
+    return cache;
+  }, [dbArticles]);
+
+  // ─── キャッシュ済みキーワード（記事ごとに一度だけ計算）───
+  const articleKeywordCache = useMemo(() => {
+    const cache = new Map<string, Set<string>>();
+    articleTextCache.forEach((text, key) => {
+      cache.set(key, new Set(extractKeywords(text)));
+    });
+    return cache;
+  }, [articleTextCache]);
 
   // DB保存記事を取得
   useEffect(() => {
@@ -95,160 +230,41 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
     setIsPanning(false);
   };
 
-  // HTMLタグを除去してテキストを抽出
-  const extractText = (html: string): string => {
-    if (!html) return '';
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent || div.innerText || '';
-  };
+  // ─── DB保存記事全体をグラフ用データに変換（useMemo で記事変化時のみ再計算）───
+  const dbTabs = useMemo<ArticleTab[]>(() =>
+    dbArticles.map((article, idx) => ({
+      id: String(article.id || article.url || idx),
+      article,
+      lastViewed: 0,
+    })),
+    [dbArticles]
+  );
 
-  // 技術分野向けキーワード辞書（日本語/英語）
-  const TECH_TERM_ALIASES: Record<string, string[]> = {
-    typescript: ['typescript', 'type script'],
-    javascript: ['javascript', 'ecmascript'],
-    python: ['python'],
-    java: ['java'],
-    'c++': ['c++', 'cpp'],
-    'c#': ['c#', 'csharp'],
-    golang: ['golang', 'go言語'],
-    rust: ['rust'],
-    kotlin: ['kotlin'],
-    swift: ['swift'],
-    php: ['php'],
-    ruby: ['ruby'],
-    react: ['react', 'reactjs', 'react.js'],
-    nextjs: ['next.js', 'nextjs'],
-    vue: ['vue', 'vue.js', 'vuejs'],
-    angular: ['angular'],
-    nodejs: ['node.js', 'nodejs'],
-    spring: ['spring', 'spring boot', 'springboot'],
-    django: ['django'],
-    flask: ['flask'],
-    fastapi: ['fastapi', 'fast api'],
-    api: ['api', 'rest', 'restful', 'graphql'],
-    database: ['database', 'データベース'],
-    sql: ['sql', 'postgresql', 'postgres', 'mysql', 'sqlite', 'sqlserver'],
-    nosql: ['nosql', 'mongodb', 'redis', 'cassandra'],
-    docker: ['docker', 'コンテナ'],
-    kubernetes: ['kubernetes', 'k8s'],
-    devops: ['devops', 'ci/cd', 'continuous integration', 'continuous delivery'],
-    aws: ['aws', 'amazon web services'],
-    gcp: ['gcp', 'google cloud'],
-    azure: ['azure'],
-    linux: ['linux', 'unix'],
-    git: ['git', 'github', 'gitlab'],
-    security: ['security', 'セキュリティ', 'oauth', 'jwt', '認証', '認可'],
-    algorithm: ['algorithm', 'アルゴリズム'],
-    datastructure: ['data structure', 'データ構造'],
-    ai: ['人工知能', 'machine learning', 'deep learning', 'llm'],
-    frontend: ['frontend', 'フロントエンド'],
-    backend: ['backend', 'バックエンド'],
-    network: ['network', 'ネットワーク', 'tcp/ip', 'http', 'https'],
-    testing: ['test', 'testing', 'テスト', 'tdd', 'jest', 'pytest'],
-    architecture: ['architecture', '設計', 'アーキテクチャ', 'microservices', 'マイクロサービス']
-  };
-
-  const GENERIC_EN_STOPWORDS = new Set([
-    'this', 'that', 'these', 'those', 'when', 'where', 'what', 'which', 'just', 'like', 'very',
-    'have', 'has', 'had', 'will', 'would', 'could', 'should', 'there', 'their', 'then', 'than',
-    'about', 'after', 'before', 'into', 'over', 'under', 'with', 'from', 'using', 'used', 'example'
-  ]);
-
-  const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  const countOccurrences = (text: string, term: string): number => {
-    if (!term) return 0;
-    const hasJapanese = /[\u3040-\u30FF\u4E00-\u9FFF]/.test(term);
-    const pattern = hasJapanese
-      ? new RegExp(escapeRegExp(term), 'gi')
-      : new RegExp(`\\b${escapeRegExp(term)}\\b`, 'gi');
-    return (text.match(pattern) || []).length;
-  };
-
-  // 技術記事向けキーワード抽出（日本語/英語対応）
-  const extractKeywords = (text: string): string[] => {
-    const normalized = text.toLowerCase();
-    const scores = new Map<string, number>();
-
-    Object.entries(TECH_TERM_ALIASES).forEach(([canonical, aliases]) => {
-      const occurrences = aliases.reduce((sum, alias) => sum + countOccurrences(normalized, alias.toLowerCase()), 0);
-      if (occurrences > 0) {
-        const weightedScore = occurrences * (1 + Math.log(canonical.length + 1));
-        scores.set(canonical, weightedScore);
-      }
-    });
-
-    // 辞書漏れの英語技術語を補完（一般語は除外）
-    const tokenCandidates = normalized.match(/\b[a-z][a-z0-9+#.-]{3,}\b/g) || [];
-    const techSignals = ['api', 'sql', 'http', 'auth', 'cache', 'cloud', 'infra', 'deploy', 'server', 'client', 'model'];
-    tokenCandidates.forEach(token => {
-      if (GENERIC_EN_STOPWORDS.has(token)) return;
-      if (!techSignals.some(signal => token.includes(signal))) return;
-      if (token.length < 4) return;
-      if (scores.has(token)) return;
-      scores.set(token, 0.8);
-    });
-
-    return Array.from(scores.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 50)
-      .map(([keyword]) => keyword);
-  };
-
-  // コンテンツベースの類似度計算
-  const calculateContentSimilarity = (article1: Article, article2: Article): number => {
-    const text1 = extractText(article1.rendered_body || article1.body_html || '') + ' ' + (article1.title || '');
-    const text2 = extractText(article2.rendered_body || article2.body_html || '') + ' ' + (article2.title || '');
-
-    const keywords1 = new Set(extractKeywords(text1));
-    const keywords2 = new Set(extractKeywords(text2));
-
-    if (keywords1.size === 0 || keywords2.size === 0) return 0;
-
-    const intersection = new Set([...keywords1].filter(x => keywords2.has(x)));
-    const union = new Set([...keywords1, ...keywords2]);
-
-    return intersection.size / union.size;
-  };
-
-  // 全記事から興味分野を抽出（記事横断で安定した技術キーワードのみ）
-  const extractInterests = (dbTabs: ArticleTab[]) => {
+  // ─── 興味分野（キーワードキャッシュを使い再計算なし）───
+  const interests = useMemo(() => {
     const documentFrequency = new Map<string, number>();
-
     dbTabs.forEach(tab => {
-      const text = extractText(tab.article.rendered_body || tab.article.body_html || '') + ' ' + (tab.article.title || '');
-      const uniqueKeywords = new Set(extractKeywords(text));
+      const key = tab.id;
+      const uniqueKeywords = articleKeywordCache.get(key) ?? new Set<string>();
       uniqueKeywords.forEach(keyword => {
         documentFrequency.set(keyword, (documentFrequency.get(keyword) || 0) + 1);
       });
     });
-
     const minSupport = Math.max(2, Math.ceil(dbTabs.length * 0.25));
-
     return Array.from(documentFrequency.entries())
-      .filter(([_, docCount]) => docCount >= minSupport)
+      .filter(([, docCount]) => docCount >= minSupport)
       .map(([word, docCount]) => ({
         word,
         count: docCount,
-        score: docCount * (1 + Math.log(word.length + 1))
+        score: docCount * (1 + Math.log(word.length + 1)),
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 10)
       .map(({ word, count }) => ({ word, count }));
-  };
+  }, [dbTabs, articleKeywordCache]);
 
-  // DB保存記事全体をグラフ用データに変換（タブに開いているかどうかは関係なし）
-  const dbTabs: ArticleTab[] = dbArticles.map((article, idx) => ({
-    id: String(article.id || article.url || idx),
-    article: article,
-    lastViewed: 0
-  }));
-
-  const interests = extractInterests(dbTabs);
-
-  // ノードとエッジを生成（蜘蛛の巣状レイアウト）
-  const generateGraph = () => {
+  // ─── ノード・エッジ生成（dbTabs / dimensions / キャッシュが変わった時だけ再計算）───
+  const { nodes, edges } = useMemo(() => {
     const nodes: Array<{ id: string; article: Article; x: number; y: number; source: string }> = [];
     const edges: Array<{ from: string; to: string; strength: number; keywords: string[] }> = [];
 
@@ -259,95 +275,47 @@ export default function GraphView({ tabs, history, onSelectArticle, setViewMode,
     const nodeCount = dbTabs.length;
     const baseSize = Math.min(dimensions.width, dimensions.height);
 
-    // 仮ノードを作成して先にエッジを計算（接続数を知るため）
-    const tempNodes = dbTabs.map((tab, idx) => ({ id: String(tab.id), article: tab.article, index: idx }));
+    const tempNodes = dbTabs.map((tab) => ({ id: tab.id, article: tab.article }));
     const connectionCount = new Map<string, number>();
     tempNodes.forEach(n => connectionCount.set(n.id, 0));
 
-    // エッジを作成して各ノードの接続数を計算
+    // エッジを作成（キャッシュ済みキーワードを使用 → O(n²) だが extractText/extractKeywords の呼び出しゼロ）
     for (let i = 0; i < tempNodes.length; i++) {
       for (let j = i + 1; j < tempNodes.length; j++) {
-        const text1 = extractText(tempNodes[i].article.rendered_body || tempNodes[i].article.body_html || '') + ' ' + (tempNodes[i].article.title || '');
-        const text2 = extractText(tempNodes[j].article.rendered_body || tempNodes[j].article.body_html || '') + ' ' + (tempNodes[j].article.title || '');
-        const keywords1 = new Set(extractKeywords(text1));
-        const keywords2 = new Set(extractKeywords(text2));
+        const keywords1 = articleKeywordCache.get(tempNodes[i].id) ?? new Set<string>();
+        const keywords2 = articleKeywordCache.get(tempNodes[j].id) ?? new Set<string>();
         const commonKeywords = Array.from(keywords1).filter(k => keywords2.has(k));
-
-        const similarity = commonKeywords.length > 0 ? commonKeywords.length / Math.sqrt(keywords1.size * keywords2.size) : 0;
-
+        const similarity = commonKeywords.length > 0
+          ? commonKeywords.length / Math.sqrt(keywords1.size * keywords2.size)
+          : 0;
         if (similarity > 0.15 && commonKeywords.length > 0) {
-          edges.push({
-            from: tempNodes[i].id,
-            to: tempNodes[j].id,
-            strength: similarity,
-            keywords: commonKeywords.slice(0, 3)
-          });
+          edges.push({ from: tempNodes[i].id, to: tempNodes[j].id, strength: similarity, keywords: commonKeywords.slice(0, 3) });
           connectionCount.set(tempNodes[i].id, (connectionCount.get(tempNodes[i].id) || 0) + 1);
           connectionCount.set(tempNodes[j].id, (connectionCount.get(tempNodes[j].id) || 0) + 1);
         }
       }
     }
 
-    // 接続数でソート（多い順）
-    const sortedNodes = tempNodes.sort((a, b) =>
+    const sortedNodes = [...tempNodes].sort((a, b) =>
       (connectionCount.get(b.id) || 0) - (connectionCount.get(a.id) || 0)
     );
 
-    // 蜘蛛の巣状配置：同心円の層を作る
-    const layers = Math.min(5, Math.ceil(Math.sqrt(nodeCount))); // 最大5層
+    const layers = Math.min(5, Math.ceil(Math.sqrt(nodeCount)));
     const nodesPerLayer = Math.ceil(nodeCount / layers);
 
     sortedNodes.forEach((tempNode, idx) => {
       const layerIndex = Math.floor(idx / nodesPerLayer);
       const positionInLayer = idx % nodesPerLayer;
       const totalInLayer = Math.min(nodesPerLayer, nodeCount - layerIndex * nodesPerLayer);
-
-      // 層ごとに半径を変える（中心から外側へ）
-      const layerRadius = layerIndex === 0
-        ? 0 // 中心ノード
-        : (baseSize * 0.15) + (layerIndex * baseSize * 0.15);
-
-      // 各層内で均等に角度を配分
+      const layerRadius = layerIndex === 0 ? 0 : (baseSize * 0.15) + (layerIndex * baseSize * 0.15);
       const angle = (positionInLayer / totalInLayer) * 2 * Math.PI;
-
-      const x = layerIndex === 0 && positionInLayer === 0
-        ? centerX
-        : centerX + layerRadius * Math.cos(angle);
-      const y = layerIndex === 0 && positionInLayer === 0
-        ? centerY
-        : centerY + layerRadius * Math.sin(angle);
-
-      nodes.push({
-        id: tempNode.id,
-        article: tempNode.article,
-        x,
-        y,
-        source: getArticleSource(tempNode.article)
-      });
+      const x = layerIndex === 0 && positionInLayer === 0 ? centerX : centerX + layerRadius * Math.cos(angle);
+      const y = layerIndex === 0 && positionInLayer === 0 ? centerY : centerY + layerRadius * Math.sin(angle);
+      nodes.push({ id: tempNode.id, article: tempNode.article, x, y, source: getArticleSource(tempNode.article) });
     });
 
     return { nodes, edges };
-  };
-
-  const { nodes, edges } = generateGraph();
-
-  const getNodeColor = (source: string) => {
-    switch (source) {
-      case 'qiita': return '#10b981';
-      case 'dev': return '#a855f7';
-      case 'database': return '#3b82f6';
-      default: return '#64748b';
-    }
-  };
-
-  const getNodeStroke = (source: string) => {
-    switch (source) {
-      case 'qiita': return '#059669';
-      case 'dev': return '#7c3aed';
-      case 'database': return '#2563eb';
-      default: return '#475569';
-    }
-  };
+  }, [dbTabs, dimensions, articleKeywordCache]);
 
   return (
     <div className={clsx(className, 'bg-[#0B1120] flex flex-col')}>

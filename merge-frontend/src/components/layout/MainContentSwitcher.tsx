@@ -3,11 +3,11 @@
 import React from 'react';
 import ArticleContent from '../article/ArticleContent';
 import HistoryView from '../HistoryView';
-import GraphView from '../GraphView';
+import LibraryView from '../LibraryView';
 import HomeView from '../HomeView';
 import type { Article, ArticleTab, HistoryEntry } from '../../types/article';
 
-type ViewMode = 'home' | 'normal' | 'history' | 'graph';
+type ViewMode = 'home' | 'normal' | 'history' | 'library';
 
 interface MainContentSwitcherProps {
   viewMode: ViewMode;
@@ -48,8 +48,8 @@ export default function MainContentSwitcher({
     return <HistoryView history={history} onSelectArticle={onHistorySelect} className="flex-1" />;
   }
 
-  if (viewMode === 'graph') {
-    return <GraphView tabs={tabs} history={history} onSelectArticle={onHistorySelect} setViewMode={setViewMode} className="flex-1" />;
+  if (viewMode === 'library') {
+    return <LibraryView onSelectArticle={onHistorySelect} className="flex-1" />;
   }
 
   // normal モード — Split View か通常表示
@@ -91,3 +91,4 @@ export default function MainContentSwitcher({
     />
   );
 }
+

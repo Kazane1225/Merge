@@ -156,6 +156,7 @@ export default function MemoEditor({
         rendered_body: targetArticle.rendered_body || targetArticle.body_html,
         cover_image: targetArticle.cover_image || targetArticle.coverImage,
         user: targetArticle.user ?? null,
+        tags: targetArticle.tags ?? null,
       };
       if (comments && comments.length > 0) articlePayload.comments = comments;
       if (devComments && devComments.length > 0) articlePayload.devComments = devComments;
