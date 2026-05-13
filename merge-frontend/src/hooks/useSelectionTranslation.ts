@@ -25,10 +25,48 @@ const INITIAL_STATE: SelectionPopupState = {
 
 export function useSelectionTranslation(
   targetLang: 'JA' | 'EN',
+  isTranslated: boolean,
+  processedHtml: string,
   containerRef: React.RefObject<HTMLElement | null>,
 ) {
   const [popup, setPopup] = useState<SelectionPopupState>(INITIAL_STATE);
   const dismissRef = useRef(false);
+  const isTranslatedRef = useRef(isTranslated);
+
+  // isTranslatedRef を最新値に同期（クロージャ問題を回避）
+  useEffect(() => { isTranslatedRef.current = isTranslated; }, [isTranslated]);
+
+  // 元HTMLから選択範囲に対応するブロック要素のテキストを取り出す
+  const findOriginalText = useCallback((selection: Selection): string | null => {
+    if (!processedHtml || !containerRef.current) return null;
+    const range = selection.getRangeAt(0);
+
+    // ArticleBody の <article> 要素に絞る（ヘッダー・コメントとインデックスがずれないように）
+    const articleEl = containerRef.current.querySelector('article') ?? containerRef.current;
+    const blockSelector = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th, pre';
+    const doc = new DOMParser().parseFromString(processedHtml, 'text/html');
+    const allBlocksInArticle = Array.from(articleEl.querySelectorAll(blockSelector));
+    const allBlocksInDoc = Array.from(doc.querySelectorAll(blockSelector));
+
+    // 選択範囲と交差するブロック要素を抽出
+    const selectedBlocks = allBlocksInArticle.filter((el) => range.intersectsNode(el));
+    if (selectedBlocks.length === 0) return null;
+
+    const texts = selectedBlocks.map((blockEl) => {
+      const id = blockEl.getAttribute('id');
+      if (id) {
+        return doc.getElementById(id)?.textContent?.trim() ?? null;
+      }
+      const index = allBlocksInArticle.indexOf(blockEl as HTMLElement);
+      return allBlocksInDoc[index]?.textContent?.trim() ?? null;
+    }).filter(Boolean) as string[];
+
+    return texts.length > 0 ? texts.join('\n') : null;
+  }, [processedHtml, containerRef]);
+
+  const findOriginalTextRef = useRef(findOriginalText);
+  // findOriginalTextRef を最新値に同期
+  useEffect(() => { findOriginalTextRef.current = findOriginalText; }, [findOriginalText]);
 
   const dismiss = useCallback(() => {
     dismissRef.current = true;
@@ -59,6 +97,22 @@ export function useSelectionTranslation(
       }
 
       const rect = selection!.getRangeAt(0).getBoundingClientRect();
+
+      // 全体翻訳中は元HTMLから対応テキストを即抽出して表示（APIコール不要）
+      if (isTranslatedRef.current) {
+        const originalText = findOriginalTextRef.current(selection!);
+        setPopup({
+          visible: true,
+          x: rect.left + rect.width / 2,
+          y: rect.top - 8,
+          selectedText: text,
+          translatedText: originalText ?? null,
+          isTranslating: false,
+          error: originalText === null ? '原文を取得できませんでした' : null,
+        });
+        return;
+      }
+
       setPopup({
         visible: true,
         x: rect.left + rect.width / 2,
@@ -74,12 +128,13 @@ export function useSelectionTranslation(
     const handleSelectionChange = () => {
       const text = window.getSelection()?.toString().trim() ?? '';
       if (!text) {
-        // 翻訳中・翻訳結果表示中・エラー表示中はユーザが読んでいるので閉じない
         setPopup((prev) => {
-          if (prev.visible && !prev.isTranslating && prev.translatedText === null && prev.error === null) {
-            return INITIAL_STATE;
-          }
-          return prev;
+          if (!prev.visible) return prev;
+          // 翻訳済みモードの原文表示 or 通常の翻訳前ボタン表示中 → 選択解除で閉じる
+          // 翻訳中 or 通常翻訳後の結果表示中 → ユーザが読んでいるので閉じない
+          if (prev.isTranslating) return prev;
+          if (!isTranslatedRef.current && prev.translatedText !== null) return prev;
+          return INITIAL_STATE;
         });
       }
     };
@@ -123,5 +178,5 @@ export function useSelectionTranslation(
     }
   }, [popup.selectedText, targetLang]);
 
-  return { popup, translate, dismiss };
+  return { popup, translate, dismiss, isTranslated };
 }

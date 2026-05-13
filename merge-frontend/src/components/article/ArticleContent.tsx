@@ -59,7 +59,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     popup: selectionPopup,
     translate: translateSelection,
     dismiss: dismissSelectionPopup,
-  } = useSelectionTranslation(targetLang, contentRef);
+  } = useSelectionTranslation(targetLang, isTranslated, processedHtml, contentRef);
 
   // Mermaid ダイアグラムのレンダリング（原文・翻訳どちらの表示時も対応）
   const displayedHtml = translatedHtml ?? processedHtml;
@@ -210,6 +210,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
       <SelectionTranslatePopup
         popup={selectionPopup}
         targetLang={targetLang}
+        isTranslated={isTranslated}
         onTranslate={translateSelection}
         onDismiss={dismissSelectionPopup}
       />

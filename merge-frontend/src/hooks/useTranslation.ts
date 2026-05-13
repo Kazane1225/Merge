@@ -104,24 +104,41 @@ export function useTranslation(
     setError(null);
 
     try {
-      // [0] = タイトル, [1] = 記事HTML, [2..n] = コメント本文HTML
       const commentBodiesRaw = comments.map(c => {
         const qc = c as QiitaComment;
         const dc = c as DevComment;
         return qc.rendered_body ?? dc.body_html ?? qc.body ?? dc.body ?? '';
       });
 
-      const texts = [article!.title ?? '', processedHtml, ...commentBodiesRaw];
-
-      const res = await fetch(`${API_BASE}/translate`, {
+      // 記事（title + html）を翻訳（1リクエスト目）
+      const articleRes = await fetch(`${API_BASE}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texts, targetLang, tagHandling: true }),
+        body: JSON.stringify({ texts: [article!.title ?? '', processedHtml], targetLang, tagHandling: true }),
       });
+      if (!articleRes.ok) throw new Error(`HTTP ${articleRes.status}`);
+      const articleData = await articleRes.json() as { translations: string[] };
+      const [transTitle, transHtml] = articleData.translations;
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as { translations: string[] };
-      const [transTitle, transHtml, ...transCommentBodies] = data.translations;
+      // コメントを5件ずつバッチ翻訳（2リクエスト目以降、失敗しても原文を使う）
+      const transCommentBodies: string[] = [];
+      const COMMENT_BATCH = 5;
+      for (let i = 0; i < commentBodiesRaw.length; i += COMMENT_BATCH) {
+        const batch = commentBodiesRaw.slice(i, i + COMMENT_BATCH);
+        try {
+          const batchRes = await fetch(`${API_BASE}/translate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ texts: batch, targetLang, tagHandling: true }),
+          });
+          if (!batchRes.ok) throw new Error(`HTTP ${batchRes.status}`);
+          const batchData = await batchRes.json() as { translations: string[] };
+          transCommentBodies.push(...batchData.translations);
+        } catch {
+          // コメント翻訳失敗時は原文をそのまま使用
+          transCommentBodies.push(...batch);
+        }
+      }
 
       // コメントに翻訳本文をマージ
       const translatedComments = comments.map((c, i) => {

@@ -6,6 +6,7 @@ import type { SelectionPopupState } from '../../hooks/useSelectionTranslation';
 interface SelectionTranslatePopupProps {
   popup: SelectionPopupState;
   targetLang: 'JA' | 'EN';
+  isTranslated: boolean;
   onTranslate: () => void;
   onDismiss: () => void;
 }
@@ -13,6 +14,7 @@ interface SelectionTranslatePopupProps {
 export default function SelectionTranslatePopup({
   popup,
   targetLang,
+  isTranslated,
   onTranslate,
   onDismiss,
 }: SelectionTranslatePopupProps) {
@@ -44,8 +46,8 @@ export default function SelectionTranslatePopup({
     >
       {/* 吹き出し */}
       <div className="relative bg-slate-800 border border-slate-600/70 rounded-xl shadow-2xl shadow-black/60 overflow-hidden min-w-[180px] max-w-[400px]">
-        {/* ヘッダー（翻訳前） */}
-        {popup.translatedText === null && !popup.isTranslating && (
+        {/* ヘッダー（通常モード: 翻訳ボタン） */}
+        {popup.translatedText === null && !popup.isTranslating && !isTranslated && (
           <div className="flex items-center gap-2 px-3 py-2">
             <button
               data-selection-popup
@@ -85,7 +87,12 @@ export default function SelectionTranslatePopup({
         {/* 翻訳結果 */}
         {popup.translatedText !== null && (
           <div className="flex flex-col" data-selection-popup>
-            <div className="px-3 pt-2.5 pb-2">
+            {isTranslated && (
+              <div className="px-3 pt-2 pb-0">
+                <span className="text-[10px] font-semibold text-amber-400/80 uppercase tracking-wide">原文</span>
+              </div>
+            )}
+            <div className="px-3 pt-2 pb-2">
               <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap break-words">
                 {popup.translatedText}
               </p>
