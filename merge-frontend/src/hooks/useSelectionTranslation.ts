@@ -49,10 +49,11 @@ export function useSelectionTranslation(
         return;
       }
 
-      // コンテナ外の選択は無視
+      // コンテナ外の選択はポップアップを閉じて無視
       if (containerRef.current && selection?.rangeCount) {
         const range = selection.getRangeAt(0);
         if (!containerRef.current.contains(range.commonAncestorContainer)) {
+          dismiss();
           return;
         }
       }
@@ -69,8 +70,32 @@ export function useSelectionTranslation(
       });
     };
 
+    // 選択解除を確実に検知: mouseup だけでは拾えないケースをカバー
+    const handleSelectionChange = () => {
+      const text = window.getSelection()?.toString().trim() ?? '';
+      if (!text) {
+        // 翻訳中・翻訳結果表示中・エラー表示中はユーザが読んでいるので閉じない
+        setPopup((prev) => {
+          if (prev.visible && !prev.isTranslating && prev.translatedText === null && prev.error === null) {
+            return INITIAL_STATE;
+          }
+          return prev;
+        });
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss();
+    };
+
     document.addEventListener('mouseup', handleMouseUp);
-    return () => document.removeEventListener('mouseup', handleMouseUp);
+    document.addEventListener('selectionchange', handleSelectionChange);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [containerRef, dismiss]);
 
   const translate = useCallback(async () => {
