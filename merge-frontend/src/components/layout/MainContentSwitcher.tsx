@@ -23,6 +23,8 @@ interface MainContentSwitcherProps {
   setViewMode: (mode: ViewMode) => void;
   splitRatio?: number;
   onSplitResizerMouseDown?: () => void;
+  isReaderMode?: boolean;
+  onReaderModeChange?: (v: boolean) => void;
 }
 
 export default function MainContentSwitcher({
@@ -39,6 +41,8 @@ export default function MainContentSwitcher({
   setViewMode,
   splitRatio = 0.5,
   onSplitResizerMouseDown,
+  isReaderMode,
+  onReaderModeChange,
 }: MainContentSwitcherProps) {
   if (viewMode === 'home') {
     return <HomeView onSelectArticle={onHistorySelect} onOpenSearch={onOpenSearch} onSearchTag={onSearchTag} history={history} className="flex-1" />;
@@ -88,6 +92,8 @@ export default function MainContentSwitcher({
       className="flex-1"
       onViewUserArticles={onViewUserArticles}
       onSelectArticle={onSelectArticle}
+      isReaderMode={isReaderMode}
+      onReaderModeChange={onReaderModeChange}
     />
   );
 }

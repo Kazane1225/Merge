@@ -13,6 +13,8 @@ import TableOfContents from './TableOfContents';
 import ArticleBody from './ArticleBody';
 import { API_BASE } from '../../lib/api';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useSelectionTranslation } from '../../hooks/useSelectionTranslation';
+import SelectionTranslatePopup from './SelectionTranslatePopup';
 
 interface ArticleContentProps {
   article: Article | null;
@@ -20,9 +22,11 @@ interface ArticleContentProps {
   onViewUserArticles?: (article: Article) => void;
   onSelectArticle?: (article: Article) => void;
   hideToc?: boolean;
+  isReaderMode?: boolean;
+  onReaderModeChange?: (v: boolean) => void;
 }
 
-const ArticleContent = React.memo(function ArticleContent({ article, className, onViewUserArticles, onSelectArticle, hideToc }: ArticleContentProps) {
+const ArticleContent = React.memo(function ArticleContent({ article, className, onViewUserArticles, onSelectArticle, hideToc, isReaderMode = false, onReaderModeChange }: ArticleContentProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const tocNavRef = useRef<HTMLElement>(null);
@@ -31,6 +35,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
   const activeHeadingIdRef = useRef<string>('');
 
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
+  const [isSepia, setIsSepia] = useState(false);
 
   const { processedHtml, tocItems, readingTime } = useArticleHtml(article, contentRef);
   const { comments, commentsLoading } = useArticleComments(article);
@@ -49,6 +54,12 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     translatedTocItems,
     translatedComments,
   } = useTranslation(article, processedHtml, comments);
+
+  const {
+    popup: selectionPopup,
+    translate: translateSelection,
+    dismiss: dismissSelectionPopup,
+  } = useSelectionTranslation(targetLang, contentRef);
 
   // TOC heading要素をキャッシュ（記事変更・翻訳切替時はアクティブ見出しもリセット）
   useEffect(() => {
@@ -159,6 +170,14 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
 
   return (
     <div className={clsx('flex flex-col w-full h-full relative', className)}>
+      {/* 選択範囲翻訳ポップアップ */}
+      <SelectionTranslatePopup
+        popup={selectionPopup}
+        targetLang={targetLang}
+        onTranslate={translateSelection}
+        onDismiss={dismissSelectionPopup}
+      />
+
       {/* スクロール進捗バー */}
       <div className="fixed top-0 left-0 right-0 h-1 bg-slate-800/50 z-50">
         <div
@@ -187,6 +206,48 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
                     </svg>
                     <span>{article.url}</span>
                   </a>
+
+                  {/* Sepia + Reader ボタン */}
+                  <div className="flex items-center gap-1 border border-slate-700/50 rounded-lg bg-slate-800/60 p-0.5">
+                    <button
+                      onClick={() => setIsSepia(!isSepia)}
+                      title={isSepia ? '色調をリセット' : 'ウォームトーン'}
+                      className={clsx(
+                        'flex items-center justify-center w-7 h-7 rounded-md transition-all',
+                        isSepia
+                          ? 'bg-amber-900/40 text-amber-400'
+                          : 'text-slate-500 hover:text-slate-200 hover:bg-slate-700/60',
+                      )}
+                    >
+                      {/* Sun icon */}
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <circle cx="12" cy="12" r="4"/>
+                        <path strokeLinecap="round" d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onReaderModeChange?.(!isReaderMode)}
+                      title={isReaderMode ? '通常表示に戻す' : 'フォーカスモード'}
+                      className={clsx(
+                        'flex items-center justify-center w-7 h-7 rounded-md transition-all',
+                        isReaderMode
+                          ? 'bg-indigo-900/40 text-indigo-400'
+                          : 'text-slate-500 hover:text-slate-200 hover:bg-slate-700/60',
+                      )}
+                    >
+                      {isReaderMode ? (
+                        /* Minimize icon */
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
+                        </svg>
+                      ) : (
+                        /* Maximize icon */
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 3h6m0 0v6m0-6l-7 7M9 21H3m0 0v-6m0 6l7-7"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
 
                   {/* 翻訳言語トグル + 翻訳ボタン */}
                   <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
@@ -262,7 +323,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
                 </div>
           </div>
             </div>
-            {!hideToc && <div className="w-64 flex-shrink-0" />}
+            {!hideToc && !isReaderMode && <div className="w-64 flex-shrink-0" />}
           </div>
         </div>
       )}
@@ -271,7 +332,11 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
       <div
         ref={contentRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar"
+        className={clsx(
+          'flex-1 overflow-y-auto scroll-smooth custom-scrollbar',
+          isSepia && '[&_p]:leading-loose [&_p]:tracking-wide [&_li]:leading-loose',
+        )}
+        style={isSepia ? { filter: 'sepia(0.35) brightness(0.92)' } : undefined}
       >
         <div className="flex min-h-full">
           {/* メインコンテンツ */}
@@ -324,7 +389,7 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
           </div>
 
           {/* 目次サイドバー */}
-          {article && !hideToc && (
+          {article && !hideToc && !isReaderMode && (
             <TableOfContents
               tocItems={translatedTocItems ?? tocItems}
               activeHeadingId={activeHeadingId}

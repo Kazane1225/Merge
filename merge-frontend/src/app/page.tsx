@@ -29,6 +29,7 @@ const LEFT_NAV_ITEMS: { mode: ViewMode; icon: LucideIcon; label: string }[] = [
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('home');
+  const [isReaderMode, setIsReaderMode] = useState(false);
   const sidebarRef = useRef<SidebarHandle>(null);
 
   const { history, addToHistory } = useHistory();
@@ -143,8 +144,8 @@ export default function Home() {
         })}
       </aside>
 
-      {/* Left Sidebar — ホーム画面では非表示 */}
-      {viewMode !== 'home' && (
+      {/* Left Sidebar — ホーム画面では非表示、リーダーモード中も非表示 */}
+      {viewMode !== 'home' && !isReaderMode && (
         <Sidebar
           ref={sidebarRef}
           open={sidebarOpen}
@@ -191,6 +192,8 @@ export default function Home() {
                 setViewMode={setViewMode}
                 splitRatio={splitRatio}
                 onSplitResizerMouseDown={handleSplitResizerMouseDown}
+                isReaderMode={isReaderMode}
+                onReaderModeChange={setIsReaderMode}
               />
             </ErrorBoundary>
 
@@ -219,8 +222,8 @@ export default function Home() {
             )}
           </div>
 
-          {/* メモペイン — 検索/記事表示モードのみ */}
-          {viewMode === 'normal' && (
+          {/* メモペイン — 検索/記事表示モードのみ、リーダーモード中は非表示 */}
+          {viewMode === 'normal' && !isReaderMode && (
             <MemoPane
               selectedArticle={selectedArticle}
               memoWidth={memoWidth}

@@ -311,7 +311,7 @@ export default function MemoEditor({
           />
         ) : showArticleBody && targetArticle && (targetArticle.rendered_body || targetArticle.body_html) ? (
           <div className="w-full h-full p-6 overflow-y-auto custom-scrollbar bg-[#0B1120]">
-            <div className="article-body text-sm text-slate-300 prose prose-invert max-w-none">
+            <div className="article-body max-w-2xl mx-auto">
               <div 
                 dangerouslySetInnerHTML={{ 
                   __html: targetArticle?.rendered_body || targetArticle?.body_html || ''
@@ -322,7 +322,7 @@ export default function MemoEditor({
           </div>
         ) : (
           <div className="w-full h-full p-6 overflow-y-auto custom-scrollbar bg-[#0B1120]">
-            <div className="qiita-content text-sm">
+            <div className="qiita-content text-sm max-w-2xl mx-auto">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm]}
                 components={{
