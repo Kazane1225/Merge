@@ -12,6 +12,18 @@ interface TranslationCache {
   comments: QiitaComment[] | DevComment[];
 }
 
+function decodeHtmlEntities(text: string): string {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  return textarea.value;
+}
+
+// 英語翻訳時に残存する日本語引用符を英語引用符に置換する
+function normalizeQuotes(text: string, targetLang: 'JA' | 'EN'): string {
+  if (targetLang !== 'EN') return text;
+  return text.replace(/「/g, '\u201c').replace(/」/g, '\u201d');
+}
+
 function extractTocFromHtml(html: string): TocItem[] {
   const toc: TocItem[] = [];
   const headingRe = /<(h[1-6])[^>]*id="([^"]*)"[^>]*>([\s\S]*?)<\/\1>/gi;
@@ -19,7 +31,8 @@ function extractTocFromHtml(html: string): TocItem[] {
   while ((match = headingRe.exec(html)) !== null) {
     const tag = match[1];
     const id = match[2];
-    const text = match[3].replace(/<[^>]*>/g, '').trim();
+    const rawText = match[3].replace(/<[^>]*>/g, '').trim();
+    const text = decodeHtmlEntities(rawText);
     const level = parseInt(tag[1], 10);
     if (text) toc.push({ id, text, level });
   }
@@ -120,9 +133,9 @@ export function useTranslation(
       });
 
       const newCache: TranslationCache = {
-        title: transTitle ?? '',
-        html: transHtml,
-        tocItems: extractTocFromHtml(transHtml),
+        title: decodeHtmlEntities(normalizeQuotes(transTitle ?? '', targetLang)),
+        html: normalizeQuotes(transHtml, targetLang),
+        tocItems: extractTocFromHtml(normalizeQuotes(transHtml, targetLang)),
         comments: translatedComments as QiitaComment[] | DevComment[],
       };
       setCaches(prev => ({ ...prev, [targetLang]: newCache }));

@@ -61,6 +61,42 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     dismiss: dismissSelectionPopup,
   } = useSelectionTranslation(targetLang, contentRef);
 
+  // Mermaid ダイアグラムのレンダリング（原文・翻訳どちらの表示時も対応）
+  const displayedHtml = translatedHtml ?? processedHtml;
+  useEffect(() => {
+    if (!displayedHtml.includes('mermaid-to-render')) return;
+    if (!contentRef.current) return;
+    const elements = contentRef.current.querySelectorAll<HTMLElement>('.mermaid-to-render:not([data-mermaid-rendered])');
+    if (elements.length === 0) return;
+    import('mermaid').then(({ default: mermaid }) => {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'dark',
+        darkMode: true,
+        themeVariables: {
+          background: '#0f172a',
+          primaryColor: '#6366f1',
+          primaryTextColor: '#e2e8f0',
+          lineColor: '#94a3b8',
+          secondaryColor: '#1e293b',
+          tertiaryColor: '#1e293b',
+        },
+      });
+      elements.forEach(async (el) => {
+        el.setAttribute('data-mermaid-rendered', 'true');
+        const code = el.textContent ?? '';
+        if (!code.trim()) return;
+        try {
+          const id = `mermaid-${Math.random().toString(36).slice(2)}`;
+          const { svg } = await mermaid.render(id, code.trim());
+          el.innerHTML = svg;
+        } catch {
+          el.style.display = 'none';
+        }
+      });
+    });
+  }, [displayedHtml]);
+
   // TOC heading要素をキャッシュ（記事変更・翻訳切替時はアクティブ見出しもリセット）
   useEffect(() => {
     activeHeadingIdRef.current = '';

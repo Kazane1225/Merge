@@ -10,7 +10,7 @@ interface UseArticleHtmlResult {
 
 // 処理済みHTMLのキャッシュ（記事IDをキーに）
 // articleProcessor.ts を変更したらこのバージョンを上げること
-const PROCESSOR_VERSION = 'v3';
+const PROCESSOR_VERSION = 'v5';
 const htmlCache = new Map<string, { html: string; toc: TocItem[] }>();
 
 /**

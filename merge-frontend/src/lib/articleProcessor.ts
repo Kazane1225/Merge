@@ -111,6 +111,23 @@ export function processArticleHtml(rawHtml: string): { html: string; toc: TocIte
     'src="https://i.ytimg.com/vi/$1/maxresdefault.jpg" loading="lazy" decoding="async" data-yt-id="$1"'
   );
 
+  // Qiita Mermaid iframeを自前レンダリング用のdivに変換
+  // data-content はシングルクォート版とダブルクォート(&quot;エンコード)版の両方が存在する
+  html = html.replace(
+    /<iframe[^>]*src="https:\/\/qiita\.com\/embed-contents\/mermaid[^"]*"[^>]*data-content=(?:'([^']*)'|"([^"]*)")[\s\S]*?<\/iframe>/gi,
+    (_: string, single: string | undefined, double: string | undefined) => {
+      try {
+        const raw = (single ?? double ?? '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+        const parsed = JSON.parse(raw);
+        const code = parsed.data ?? '';
+        const escaped = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return `<div class="mermaid-to-render my-6 flex justify-center" translate="no">${escaped}</div>`;
+      } catch {
+        return '';
+      }
+    }
+  );
+
   // シンタックスハイライト
   html = html.replace(
     /<pre([^>]*)>\s*<code([^>]*)>([\s\S]*?)<\/code>\s*<\/pre>/gi,
