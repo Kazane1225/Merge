@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import clsx from 'clsx';
 import DOMPurify from 'dompurify';
 import type { QiitaComment, DevComment } from '../../types/article';
 import type { ArticleSource } from '../../lib/articleHelpers';
@@ -54,9 +55,10 @@ const CommentsEmpty = () => (
   </div>
 );
 
+// ----- コメントセクションヘッダー -----
+
 const CommentsHeader = ({ count }: { count: number }) => (
   <div className="mb-8">
-    {/* グラデーション区切り線 */}
     <div className="h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent mb-8" />
     <div className="flex items-center gap-3">
       <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-900/50 border border-indigo-700/50 shadow-lg shadow-indigo-900/30">
@@ -175,28 +177,36 @@ const DevCommentItem = ({ comment, depth = 0 }: { comment: DevComment; depth?: n
 interface ArticleCommentsProps {
   source: ArticleSource;
   articleId: number | string;
-  comments: QiitaComment[] | DevComment[];
+  displayComments: QiitaComment[] | DevComment[];
   commentsLoading: boolean;
+  commentError: string | null;
 }
 
 /**
  * Qiita / Dev.to 両方のコメントセクションを担当するコンポーネント。
+ * 翻訳状態は useCommentTranslation を通じて ArticleContent で管理し、
+ * displayComments として受け取る。
  */
-export default function ArticleComments({ source, articleId, comments, commentsLoading }: ArticleCommentsProps) {
+export default function ArticleComments({ source, articleId, displayComments, commentsLoading, commentError }: ArticleCommentsProps) {
   if ((source !== 'qiita' && source !== 'dev') || !articleId) return null;
 
   return (
     <div className="mt-14">
-      <CommentsHeader count={commentsLoading ? 0 : comments.length} />
+      <CommentsHeader count={commentsLoading ? 0 : displayComments.length} />
+      {commentError && (
+        <div className="mb-4 px-4 py-2.5 rounded-lg bg-red-900/30 border border-red-700/40 text-xs text-red-300">
+          {commentError}
+        </div>
+      )}
       {commentsLoading ? (
         <CommentsLoading />
-      ) : comments.length === 0 ? (
+      ) : displayComments.length === 0 ? (
         <CommentsEmpty />
       ) : (
         <div className="space-y-3">
           {source === 'qiita'
-            ? (comments as QiitaComment[]).map((c, idx) => <QiitaCommentItem key={c.id ?? `qiita-${idx}`} comment={c} />)
-            : (comments as DevComment[]).map((c, idx) => <DevCommentItem key={c.id_code ?? `dev-${idx}`} comment={c} />)
+            ? (displayComments as QiitaComment[]).map((c, idx) => <QiitaCommentItem key={c.id ?? `qiita-${idx}`} comment={c} />)
+            : (displayComments as DevComment[]).map((c, idx) => <DevCommentItem key={c.id_code ?? `dev-${idx}`} comment={c} />)
           }
         </div>
       )}

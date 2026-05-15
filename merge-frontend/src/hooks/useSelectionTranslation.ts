@@ -28,23 +28,26 @@ export function useSelectionTranslation(
   isTranslated: boolean,
   processedHtml: string,
   containerRef: React.RefObject<HTMLElement | null>,
+  translatedHtml: string | null,
 ) {
   const [popup, setPopup] = useState<SelectionPopupState>(INITIAL_STATE);
   const dismissRef = useRef(false);
   const isTranslatedRef = useRef(isTranslated);
+  const translatedHtmlRef = useRef(translatedHtml);
 
-  // isTranslatedRef を最新値に同期（クロージャ問題を回避）
+  // isTranslatedRef / translatedHtmlRef を最新値に同期（クロージャ問題を回避）
   useEffect(() => { isTranslatedRef.current = isTranslated; }, [isTranslated]);
+  useEffect(() => { translatedHtmlRef.current = translatedHtml; }, [translatedHtml]);
 
-  // 元HTMLから選択範囲に対応するブロック要素のテキストを取り出す
-  const findOriginalText = useCallback((selection: Selection): string | null => {
-    if (!processedHtml || !containerRef.current) return null;
+  // 指定した HTML ソースから選択範囲に対応するブロック要素のテキストを取り出す
+  const findBlockTextInHtml = useCallback((selection: Selection, sourceHtml: string): string | null => {
+    if (!sourceHtml || !containerRef.current) return null;
     const range = selection.getRangeAt(0);
 
     // ArticleBody の <article> 要素に絞る（ヘッダー・コメントとインデックスがずれないように）
     const articleEl = containerRef.current.querySelector('article') ?? containerRef.current;
     const blockSelector = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th, pre';
-    const doc = new DOMParser().parseFromString(processedHtml, 'text/html');
+    const doc = new DOMParser().parseFromString(sourceHtml, 'text/html');
     const allBlocksInArticle = Array.from(articleEl.querySelectorAll(blockSelector));
     const allBlocksInDoc = Array.from(doc.querySelectorAll(blockSelector));
 
@@ -62,11 +65,11 @@ export function useSelectionTranslation(
     }).filter(Boolean) as string[];
 
     return texts.length > 0 ? texts.join('\n') : null;
-  }, [processedHtml, containerRef]);
+  }, [containerRef]);
 
-  const findOriginalTextRef = useRef(findOriginalText);
-  // findOriginalTextRef を最新値に同期
-  useEffect(() => { findOriginalTextRef.current = findOriginalText; }, [findOriginalText]);
+  const findBlockTextInHtmlRef = useRef(findBlockTextInHtml);
+  // findBlockTextInHtmlRef を最新値に同期
+  useEffect(() => { findBlockTextInHtmlRef.current = findBlockTextInHtml; }, [findBlockTextInHtml]);
 
   const dismiss = useCallback(() => {
     dismissRef.current = true;
@@ -100,7 +103,7 @@ export function useSelectionTranslation(
 
       // 全体翻訳中は元HTMLから対応テキストを即抽出して表示（APIコール不要）
       if (isTranslatedRef.current) {
-        const originalText = findOriginalTextRef.current(selection!);
+        const originalText = findBlockTextInHtmlRef.current(selection!, processedHtml);
         setPopup({
           visible: true,
           x: rect.left + rect.width / 2,
@@ -109,6 +112,21 @@ export function useSelectionTranslation(
           translatedText: originalText ?? null,
           isTranslating: false,
           error: originalText === null ? '原文を取得できませんでした' : null,
+        });
+        return;
+      }
+
+      // 全体翻訳キャッシュがあれば翻訳済みHTMLから対応テキストを即抽出（APIコール不要）
+      if (translatedHtmlRef.current) {
+        const cachedText = findBlockTextInHtmlRef.current(selection!, translatedHtmlRef.current);
+        setPopup({
+          visible: true,
+          x: rect.left + rect.width / 2,
+          y: rect.top - 8,
+          selectedText: text,
+          translatedText: cachedText ?? null,
+          isTranslating: false,
+          error: cachedText === null ? '翻訳文を取得できませんでした' : null,
         });
         return;
       }

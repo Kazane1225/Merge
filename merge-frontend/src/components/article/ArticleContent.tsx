@@ -14,6 +14,7 @@ import ArticleBody from './ArticleBody';
 import { API_BASE } from '../../lib/api';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useSelectionTranslation } from '../../hooks/useSelectionTranslation';
+import { useCommentTranslation } from '../../hooks/useCommentTranslation';
 import SelectionTranslatePopup from './SelectionTranslatePopup';
 
 interface ArticleContentProps {
@@ -52,14 +53,21 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     translatedTitle,
     translatedHtml,
     translatedTocItems,
-    translatedComments,
-  } = useTranslation(article, processedHtml, comments);
+  } = useTranslation(article, processedHtml);
+
+  const {
+    isTranslated: isCommentTranslated,
+    isTranslating: isCommentTranslating,
+    error: commentError,
+    displayComments,
+    toggle: toggleComments,
+  } = useCommentTranslation(source, article?.id, comments, targetLang);
 
   const {
     popup: selectionPopup,
     translate: translateSelection,
     dismiss: dismissSelectionPopup,
-  } = useSelectionTranslation(targetLang, isTranslated, processedHtml, contentRef);
+  } = useSelectionTranslation(targetLang, isTranslated, processedHtml, contentRef, translatedHtml ?? null);
 
   // Mermaid ダイアグラムのレンダリング（原文・翻訳どちらの表示時も対応）
   const displayedHtml = translatedHtml ?? processedHtml;
@@ -224,28 +232,29 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
         />
       </div>
 
-      {/* 固定メタバー（スクロール領域外） */}
+      {/* 固定メタバー */}
       {article && (
         <div className="flex-shrink-0 border-b border-slate-800/50">
           <div className="flex">
             <div className="flex-1 flex justify-center">
               <div className="w-full max-w-5xl px-6 lg:px-8 py-2">
             <ArticleMeta article={article} readingTime={readingTime} onViewUserArticles={onViewUserArticles} />
-            <div className="flex items-center gap-3 flex-wrap">
+            {/* 1行目: URL + ユーティリティ + 国旗 */}
+                <div className="flex items-center gap-3">
                   <a
                     href={article.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 hover:underline break-all font-mono text-sm group"
+                    className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 hover:underline truncate font-mono text-sm group min-w-0"
                   >
                     <svg className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
-                    <span>{article.url}</span>
+                    <span className="truncate">{article.url}</span>
                   </a>
 
                   {/* Sepia + Reader ボタン */}
-                  <div className="flex items-center gap-1 border border-slate-700/50 rounded-lg bg-slate-800/60 p-0.5">
+                  <div className="flex items-center gap-1 border border-slate-700/50 rounded-lg bg-slate-800/60 p-0.5 flex-shrink-0">
                     <button
                       onClick={() => setIsSepia(!isSepia)}
                       title={isSepia ? '色調をリセット' : 'ウォームトーン'}
@@ -256,7 +265,6 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
                           : 'text-slate-500 hover:text-slate-200 hover:bg-slate-700/60',
                       )}
                     >
-                      {/* Sun icon */}
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <circle cx="12" cy="12" r="4"/>
                         <path strokeLinecap="round" d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -273,12 +281,10 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
                       )}
                     >
                       {isReaderMode ? (
-                        /* Minimize icon */
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
                         </svg>
                       ) : (
-                        /* Maximize icon */
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 3h6m0 0v6m0-6l-7 7M9 21H3m0 0v-6m0 6l7-7"/>
                         </svg>
@@ -286,53 +292,89 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
                     </button>
                   </div>
 
-                  {/* 翻訳言語トグル + 翻訳ボタン */}
-                  <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
-                    {/* 国旗トグル */}
-                    <div className="flex items-center rounded-lg border border-slate-700/50 overflow-hidden bg-slate-800/60 text-sm">
-                      <button
-                        onClick={() => setTargetLang('JA')}
-                        disabled={isTranslating}
-                        title="日本語に翻訳"
-                        className={clsx(
-                          'px-2.5 py-1 transition-all',
-                          targetLang === 'JA'
-                            ? 'bg-indigo-600/50 opacity-100'
-                            : 'opacity-40 hover:opacity-70',
-                        )}
-                      >
-                        <span className="fi fi-jp" style={{ width: '1.25rem', height: '0.9375rem', display: 'inline-block', backgroundSize: 'cover' }} />
-                      </button>
-                      <div className="w-px h-4 bg-slate-700/60" />
-                      <button
-                        onClick={() => setTargetLang('EN')}
-                        disabled={isTranslating}
-                        title="英語に翻訳"
-                        className={clsx(
-                          'px-2.5 py-1 transition-all',
-                          targetLang === 'EN'
-                            ? 'bg-indigo-600/50 opacity-100'
-                            : 'opacity-40 hover:opacity-70',
-                        )}
-                      >
-                        <span className="fi fi-us" style={{ width: '1.25rem', height: '0.9375rem', display: 'inline-block', backgroundSize: 'cover' }} />
-                      </button>
-                    </div>
-
-                    {/* 翻訳ボタン */}
+                  {/* 国旗トグル（右端） */}
+                  <div className="ml-auto flex items-center rounded-lg border border-slate-700/50 overflow-hidden bg-slate-800/60 text-sm flex-shrink-0">
                     <button
-                      onClick={toggleTranslation}
+                      onClick={() => setTargetLang('JA')}
                       disabled={isTranslating}
-                      title={isTranslated ? '原文に戻す' : `${targetLang === 'JA' ? '日本語' : '英語'}に翻訳`}
+                      title="日本語"
                       className={clsx(
-                        'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all',
-                        isTranslated
-                          ? 'bg-indigo-600/30 border-indigo-500/60 text-indigo-300 hover:bg-indigo-600/50'
-                          : 'bg-slate-800/60 border-slate-700/50 text-slate-400 hover:border-indigo-500/50 hover:text-slate-200',
-                        isTranslating && 'opacity-60 cursor-wait',
+                        'px-2.5 py-1 transition-all',
+                        targetLang === 'JA' ? 'bg-indigo-600/50 opacity-100' : 'opacity-40 hover:opacity-70',
                       )}
                     >
-                      {isTranslating ? (
+                      <span className="fi fi-jp" style={{ width: '1.25rem', height: '0.9375rem', display: 'inline-block', backgroundSize: 'cover' }} />
+                    </button>
+                    <div className="w-px h-4 bg-slate-700/60" />
+                    <button
+                      onClick={() => setTargetLang('EN')}
+                      disabled={isTranslating}
+                      title="English"
+                      className={clsx(
+                        'px-2.5 py-1 transition-all',
+                        targetLang === 'EN' ? 'bg-indigo-600/50 opacity-100' : 'opacity-40 hover:opacity-70',
+                      )}
+                    >
+                      <span className="fi fi-us" style={{ width: '1.25rem', height: '0.9375rem', display: 'inline-block', backgroundSize: 'cover' }} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2行目: 翻訳ボタン群 */}
+                <div className="flex items-center justify-end gap-1.5 mt-1.5">
+                  {/* 記事翻訳ボタン */}
+                  <button
+                    onClick={toggleTranslation}
+                    disabled={isTranslating}
+                    title={isTranslated ? '原文に戻す' : '記事を翻訳'}
+                    className={clsx(
+                      'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all',
+                      isTranslated
+                        ? 'bg-indigo-600/30 border-indigo-500/60 text-indigo-300 hover:bg-indigo-600/50'
+                        : 'bg-slate-800/60 border-slate-700/50 text-slate-400 hover:border-indigo-500/50 hover:text-slate-200',
+                      isTranslating && 'opacity-60 cursor-wait',
+                    )}
+                  >
+                    {isTranslating ? (
+                      <>
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                        </svg>
+                        翻訳中…
+                      </>
+                    ) : isTranslated ? (
+                      <>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                        原文に戻す
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                        </svg>
+                        記事翻訳
+                      </>
+                    )}
+                  </button>
+
+                  {/* コメント翻訳ボタン */}
+                  {(source === 'qiita' || source === 'dev') && !commentsLoading && comments.length > 0 && (
+                    <button
+                      onClick={toggleComments}
+                      disabled={isCommentTranslating}
+                      title={isCommentTranslated ? 'コメントを原文に戻す' : 'コメントを翻訳'}
+                      className={clsx(
+                        'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all',
+                        isCommentTranslated
+                          ? 'bg-indigo-600/30 border-indigo-500/60 text-indigo-300 hover:bg-indigo-600/50'
+                          : 'bg-slate-800/60 border-slate-700/50 text-slate-400 hover:border-indigo-500/50 hover:text-slate-200',
+                        isCommentTranslating && 'opacity-60 cursor-wait',
+                      )}
+                    >
+                      {isCommentTranslating ? (
                         <>
                           <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -340,23 +382,23 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
                           </svg>
                           翻訳中…
                         </>
-                      ) : isTranslated ? (
+                      ) : isCommentTranslated ? (
                         <>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                           </svg>
-                          原文に戻す
+                          コメント原文
                         </>
                       ) : (
                         <>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
                           </svg>
-                          {targetLang === 'JA' ? '日本語に翻訳' : '英語に翻訳'}
+                          コメント翻訳
                         </>
                       )}
                     </button>
-                  </div>
+                  )}
                 </div>
           </div>
             </div>
@@ -394,8 +436,9 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
                   <ArticleComments
                     source={source}
                     articleId={article.id}
-                    comments={translatedComments ?? comments}
+                    displayComments={displayComments}
                     commentsLoading={commentsLoading}
+                    commentError={commentError}
                   />
                 </div>
                 ) : (

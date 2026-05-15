@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Article, QiitaComment, DevComment } from '../types/article';
+import type { Article } from '../types/article';
 import type { TocItem } from '../lib/articleProcessor';
 import { API_BASE } from '../lib/api';
 
@@ -9,7 +9,6 @@ interface TranslationCache {
   title: string;
   html: string;
   tocItems: TocItem[];
-  comments: QiitaComment[] | DevComment[];
 }
 
 function decodeHtmlEntities(text: string): string {
@@ -49,13 +48,11 @@ export interface UseTranslationResult {
   translatedTitle: string | null;
   translatedHtml: string | null;
   translatedTocItems: TocItem[] | null;
-  translatedComments: QiitaComment[] | DevComment[] | null;
 }
 
 export function useTranslation(
   article: Article | null,
   processedHtml: string,
-  comments: QiitaComment[] | DevComment[],
 ): UseTranslationResult {
   const [isTranslated, setIsTranslated] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -104,13 +101,7 @@ export function useTranslation(
     setError(null);
 
     try {
-      const commentBodiesRaw = comments.map(c => {
-        const qc = c as QiitaComment;
-        const dc = c as DevComment;
-        return qc.rendered_body ?? dc.body_html ?? qc.body ?? dc.body ?? '';
-      });
-
-      // 記事（title + html）を翻訳（1リクエスト目）
+      // 記事（title + html）のみ翻訳（コメントは ArticleComments で独立して翻訳）
       const articleRes = await fetch(`${API_BASE}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,40 +111,10 @@ export function useTranslation(
       const articleData = await articleRes.json() as { translations: string[] };
       const [transTitle, transHtml] = articleData.translations;
 
-      // コメントを5件ずつバッチ翻訳（2リクエスト目以降、失敗しても原文を使う）
-      const transCommentBodies: string[] = [];
-      const COMMENT_BATCH = 5;
-      for (let i = 0; i < commentBodiesRaw.length; i += COMMENT_BATCH) {
-        const batch = commentBodiesRaw.slice(i, i + COMMENT_BATCH);
-        try {
-          const batchRes = await fetch(`${API_BASE}/translate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ texts: batch, targetLang, tagHandling: true }),
-          });
-          if (!batchRes.ok) throw new Error(`HTTP ${batchRes.status}`);
-          const batchData = await batchRes.json() as { translations: string[] };
-          transCommentBodies.push(...batchData.translations);
-        } catch {
-          // コメント翻訳失敗時は原文をそのまま使用
-          transCommentBodies.push(...batch);
-        }
-      }
-
-      // コメントに翻訳本文をマージ
-      const translatedComments = comments.map((c, i) => {
-        const body = transCommentBodies[i] ?? '';
-        if ('rendered_body' in c) {
-          return { ...(c as QiitaComment), rendered_body: body };
-        }
-        return { ...(c as DevComment), body_html: body };
-      });
-
       const newCache: TranslationCache = {
         title: decodeHtmlEntities(normalizeQuotes(transTitle ?? '', targetLang)),
         html: normalizeQuotes(transHtml, targetLang),
         tocItems: extractTocFromHtml(normalizeQuotes(transHtml, targetLang)),
-        comments: translatedComments as QiitaComment[] | DevComment[],
       };
       setCaches(prev => ({ ...prev, [targetLang]: newCache }));
       setIsTranslated(true);
@@ -176,6 +137,5 @@ export function useTranslation(
     translatedTitle: isTranslated ? (activeCache?.title ?? null) : null,
     translatedHtml: isTranslated ? (activeCache?.html ?? null) : null,
     translatedTocItems: isTranslated ? (activeCache?.tocItems ?? null) : null,
-    translatedComments: isTranslated ? (activeCache?.comments ?? null) : null,
   };
 }
