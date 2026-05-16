@@ -128,6 +128,12 @@ export function processArticleHtml(rawHtml: string): { html: string; toc: TocIte
     }
   );
 
+  // 数式ブロック（$$...$$）を翻訳から保護してレンダリングマーカーを付与
+  // コードブロック処理の前に適用することで、コード内の$$ はコード処理時にspanが除去される
+  html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match: string) => {
+    return `<span class="math-to-render" translate="no">${match}</span>`;
+  });
+
   // シンタックスハイライト
   html = html.replace(
     /<pre([^>]*)>\s*<code([^>]*)>([\s\S]*?)<\/code>\s*<\/pre>/gi,

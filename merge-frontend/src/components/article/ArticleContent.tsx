@@ -105,6 +105,49 @@ const ArticleContent = React.memo(function ArticleContent({ article, className, 
     });
   }, [displayedHtml]);
 
+  // MathJax 数式レンダリング（Mermaid と同様のパターン）
+  useEffect(() => {
+    if (!displayedHtml.includes('math-to-render') || !contentRef.current) return;
+    const container = contentRef.current;
+    const elements = Array.from(
+      container.querySelectorAll<HTMLElement>('.math-to-render:not([data-math-rendered])')
+    );
+    if (elements.length === 0) return;
+    elements.forEach(el => el.setAttribute('data-math-rendered', 'true'));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const win = window as any;
+    const typeset = () => (win.MathJax.typesetPromise(elements) as Promise<void>).catch(console.error);
+
+    if (win.MathJax?.typesetPromise) {
+      typeset();
+      return;
+    }
+
+    win.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+      },
+      svg: { fontCache: 'global' },
+      startup: {
+        typeset: false,
+        ready() {
+          win.MathJax.startup.defaultReady();
+          typeset();
+        },
+      },
+    };
+
+    if (!document.getElementById('mathjax-script')) {
+      const script = document.createElement('script');
+      script.id = 'mathjax-script';
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, [displayedHtml]);
+
   // TOC heading要素をキャッシュ（記事変更・翻訳切替時はアクティブ見出しもリセット）
   useEffect(() => {
     activeHeadingIdRef.current = '';

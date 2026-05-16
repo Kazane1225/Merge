@@ -72,7 +72,7 @@ const ArticleBody = memo(function ArticleBody({ processedHtml }: ArticleBodyProp
 
   const sanitized = DOMPurify.sanitize(processedHtml, {
     ADD_TAGS: ['iframe'],
-    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'loading', 'decoding', 'data-tweet-rendered', 'data-heading-id', 'data-mermaid-rendered'],
+    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'loading', 'decoding', 'data-tweet-rendered', 'data-heading-id', 'data-mermaid-rendered', 'translate', 'data-math-rendered'],
   });
   return <article dangerouslySetInnerHTML={{ __html: sanitized }} className={articleBodyClass} />;
 });

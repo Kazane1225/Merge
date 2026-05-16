@@ -107,7 +107,15 @@ export function useTranslation(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texts: [article!.title ?? '', processedHtml], targetLang, tagHandling: true }),
       });
-      if (!articleRes.ok) throw new Error(`HTTP ${articleRes.status}`);
+      if (!articleRes.ok) {
+        if (articleRes.status === 429) {
+          const errData = await articleRes.json().catch(() => ({})) as { error?: string };
+          if (errData.error === 'quota_exceeded') {
+            throw new Error('DeepLの翻訳上限に達しました。今月の文字数上限を超えています。');
+          }
+        }
+        throw new Error(`HTTP ${articleRes.status}`);
+      }
       const articleData = await articleRes.json() as { translations: string[] };
       const [transTitle, transHtml] = articleData.translations;
 
@@ -118,8 +126,8 @@ export function useTranslation(
       };
       setCaches(prev => ({ ...prev, [targetLang]: newCache }));
       setIsTranslated(true);
-    } catch {
-      setError('翻訳に失敗しました。しばらく経ってから再試行してください。');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '翻訳に失敗しました。しばらく経ってから再試行してください。');
     } finally {
       setIsTranslating(false);
     }
